@@ -1,4 +1,4 @@
-name: Flutter CI
+name: Build Flutter APK
 
 on:
   push:
@@ -13,8 +13,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
 
       - name: Install Flutter
         uses: subosito/flutter-action@v2
@@ -24,8 +30,11 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
-      - name: Run analyzer
-        run: flutter analyze
+      - name: Build Release APK
+        run: flutter build apk --release
 
-      - name: Run tests
-        run: flutter test
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: taprush-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
