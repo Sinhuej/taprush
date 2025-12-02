@@ -1,4 +1,4 @@
-name: Build Flutter APK
+name: TapRush Auto Build Pipeline
 
 on:
   push:
@@ -7,9 +7,13 @@ on:
   pull_request:
     branches:
       - main
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * *"
 
 jobs:
   build:
+    name: Build Flutter App
     runs-on: ubuntu-latest
 
     steps:
@@ -27,14 +31,57 @@ jobs:
         with:
           channel: stable
 
+      - name: Auto-increment build number
+        run: |
+          BUILD_NUMBER=$(date +'%Y%m%d%H%M')
+          echo "VERSION_CODE=$BUILD_NUMBER" >> $GITHUB_ENV
+          sed -i "s/version: .*/version: 1.0.$BUILD_NUMBER/" pubspec.yaml
+
       - name: Flutter pub get
         run: flutter pub get
 
-      - name: Build Release APK
+      - name: Build APK
         run: flutter build apk --release
 
-      - name: Upload APK Artifact
+      - name: Build AAB
+        run: flutter build appbundle --release
+
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: taprush-apk
+          name: taprush-apk-${{ env.VERSION_CODE }}
           path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: taprush-aab-${{ env.VERSION_CODE }}
+          path: build/app/outputs/bundle/release/app-release.aab
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ env.VERSION_CODE }}
+          name: "TapRush Build ${{ env.VERSION_CODE }}"
+          body: |
+            Automated TapRush build
+            APK + AAB included
+            Version code: ${{ env.VERSION_CODE }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload APK to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ env.VERSION_CODE }}
+          files: build/app/outputs/flutter-apk/app-release.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload AAB to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ env.VERSION_CODE }}
+          files: build/app/outputs/bundle/release/app-release.aab
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
