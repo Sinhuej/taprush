@@ -1,12 +1,18 @@
 import 'dart:async';
 import 'dart:math';
-
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(const TapRushApp());
+}
+
+/// BRAND COLORS (Option 3 Icon)
+class AppColors {
+  static const Color deepPurple = Color(0xFF4A1DBA);
+  static const Color neonBlue = Color(0xFF00E5FF);
+  static const Color neonPink = Color(0xFFFF2CC3);
+  static const Color midnight = Color(0xFF0A0018);
+  static const Color barYellow = Color(0xFFFFD028);
 }
 
 class TapRushApp extends StatelessWidget {
@@ -16,366 +22,233 @@ class TapRushApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'TapRush',
-      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: TapRushColors.background,
-        textTheme: GoogleFonts.rubikTextTheme().apply(
-          bodyColor: Colors.white,
-          displayColor: Colors.white,
-        ),
+        scaffoldBackgroundColor: AppColors.midnight,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: TapRushColors.accent,
+          seedColor: AppColors.deepPurple,
           brightness: Brightness.dark,
         ),
-        useMaterial3: true,
       ),
-      home: const TapRushGameScreen(),
+      home: const TapRushGame(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }
 
-class TapRushColors {
-  static const background = Color(0xFF050816);
-  static const barA = Color(0xFF00F5A0);
-  static const barB = Color(0xFF7B61FF);
-  static const barC = Color(0xFFFF00E5);
-  static const accent = Color(0xFFFFC857);
-  static const dimText = Color(0xFF9CA3AF);
-}
-
-enum GameState { ready, countdown, playing, finished }
-
-class TapRushGameScreen extends StatefulWidget {
-  const TapRushGameScreen({super.key});
+class TapRushGame extends StatefulWidget {
+  const TapRushGame({super.key});
 
   @override
-  State<TapRushGameScreen> createState() => _TapRushGameScreenState();
+  State<TapRushGame> createState() => _TapRushGameState();
 }
 
-class _TapRushGameScreenState extends State<TapRushGameScreen> {
-  static const int gameDurationSeconds = 30;
-  static const int countdownStart = 3;
+class FallingBar {
+  double y = -1.0;
+  double speed = 0.01;
+  Color color;
 
-  GameState _state = GameState.ready;
-  int _score = 0;
-  int _bestScore = 0;
-  int _timeLeft = gameDurationSeconds;
-  int _countdown = countdownStart;
-  int _activeBar = 1;
+  FallingBar(this.color);
+}
 
-  Timer? _gameTimer;
-  Timer? _countdownTimer;
-  final Random _random = Random();
+class _TapRushGameState extends State<TapRushGame> {
+  final Random random = Random();
 
-  @override
-  void initState() {
-    super.initState();
-    _loadBestScore();
-  }
+  List<FallingBar> bars = [];
+  int score = 0;
+  int lives = 3;
+
+  bool gameRunning = false;
+  Timer? gameLoopTimer;
+
+  /// Frequency of bar spawning
+  Duration spawnRate = const Duration(milliseconds: 900);
+  Timer? spawnTimer;
 
   @override
   void dispose() {
-    _gameTimer?.cancel();
-    _countdownTimer?.cancel();
+    gameLoopTimer?.cancel();
+    spawnTimer?.cancel();
     super.dispose();
   }
 
-  Future<void> _loadBestScore() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _bestScore = prefs.getInt('best_score') ?? 0;
-    });
-  }
+  void startGame() {
+    bars.clear();
+    score = 0;
+    lives = 3;
+    gameRunning = true;
 
-  Future<void> _saveBestScore() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('best_score', _bestScore);
-  }
-
-  void _startCountdown() {
-    _gameTimer?.cancel();
-    _countdownTimer?.cancel();
-
-    setState(() {
-      _state = GameState.countdown;
-      _score = 0;
-      _timeLeft = gameDurationSeconds;
-      _countdown = countdownStart;
-      _activeBar = _random.nextInt(3);
+    // GAME LOOP TICK
+    gameLoopTimer = Timer.periodic(const Duration(milliseconds: 16), (timer) {
+      updateBars();
     });
 
-    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_countdown <= 1) {
-        timer.cancel();
-        _startGame();
-      } else {
-        setState(() {
-          _countdown--;
-        });
+    // BAR SPAWNER
+    spawnTimer = Timer.periodic(spawnRate, (timer) {
+      spawnBar();
+    });
+
+    setState(() {});
+  }
+
+  void endGame() {
+    gameRunning = false;
+    gameLoopTimer?.cancel();
+    spawnTimer?.cancel();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) {
+        return AlertDialog(
+          backgroundColor: AppColors.deepPurple,
+          title: const Text(
+            "Game Over",
+            style: TextStyle(color: Colors.white, fontSize: 28),
+          ),
+          content: Text(
+            "Score: $score",
+            style: const TextStyle(color: Colors.white70, fontSize: 22),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                startGame();
+              },
+              child: const Text(
+                "Play Again",
+                style: TextStyle(color: Colors.white),
+              ),
+            )
+          ],
+        );
+      },
+    );
+  }
+
+  void spawnBar() {
+    List<Color> colors = [
+      AppColors.neonBlue,
+      AppColors.neonPink,
+      AppColors.barYellow,
+    ];
+
+    bars.add(FallingBar(colors[random.nextInt(colors.length)]));
+  }
+
+  void updateBars() {
+    setState(() {
+      for (var bar in bars) {
+        bar.y += bar.speed;
       }
-    });
-  }
 
-  void _startGame() {
-    _gameTimer?.cancel();
-
-    setState(() {
-      _state = GameState.playing;
-      _timeLeft = gameDurationSeconds;
-      _activeBar = _random.nextInt(3);
-    });
-
-    _gameTimer = Timer.periodic(const Duration(milliseconds: 200), (timer) {
-      setState(() {
-        _timeLeft = max(0, _timeLeft - 1);
+      // Remove bars that passed bottom
+      bars.removeWhere((bar) {
+        if (bar.y > 1.2) {
+          lives--;
+          if (lives <= 0) {
+            endGame();
+          }
+          return true;
+        }
+        return false;
       });
-
-      if (timer.tick % 5 == 0) {
-        setState(() {
-          _activeBar = _random.nextInt(3);
-        });
-      }
-
-      if (_timeLeft <= 0) {
-        timer.cancel();
-        _finishGame();
-      }
     });
   }
 
-  void _finishGame() {
+  void tapBar(FallingBar bar) {
     setState(() {
-      _state = GameState.finished;
-      if (_score > _bestScore) {
-        _bestScore = _score;
-        _saveBestScore();
-      }
-    });
-  }
-
-  void _onBarTapped(int index) {
-    if (_state != GameState.playing) return;
-
-    setState(() {
-      if (index == _activeBar) {
-        _score += 5;
-      } else {
-        _score += 1;
-      }
-      _activeBar = _random.nextInt(3);
+      score++;
+      bars.remove(bar);
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 16),
-            _buildHeader(),
-            const SizedBox(height: 24),
-            _buildStatusText(),
-            const SizedBox(height: 24),
-            Expanded(child: _buildBars()),
-            const SizedBox(height: 24),
-            _buildBottomButtons(),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
+      body: Stack(
         children: [
-          _buildMiniIcon(),
-          const SizedBox(width: 12),
-          _buildTitle(),
-          const Spacer(),
-          _buildScoreBox(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMiniIcon() {
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        gradient: const LinearGradient(
-          colors: [
-            TapRushColors.barA,
-            TapRushColors.barB,
-            TapRushColors.barC,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: const Icon(Icons.touch_app, color: Colors.white),
-    );
-  }
-
-  Widget _buildTitle() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'TapRush',
-          style: GoogleFonts.rubik(
-            fontSize: 24,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        Text(
-          'Tap fast. Hit the glowing bar.',
-          style: GoogleFonts.rubik(
-            fontSize: 12,
-            color: TapRushColors.dimText,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildScoreBox() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Text(
-          'Score: $_score',
-          style: GoogleFonts.rubik(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        Text(
-          'Best: $_bestScore',
-          style: GoogleFonts.rubik(
-            fontSize: 12,
-            color: TapRushColors.dimText,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatusText() {
-    String label;
-
-    if (_state == GameState.ready) label = 'Tap START to begin';
-    else if (_state == GameState.countdown) label = 'Get ready… $_countdown';
-    else if (_state == GameState.playing) label = 'Time left: $_timeLeft';
-    else label = 'Time\'s up! Final score: $_score';
-
-    return Text(
-      label,
-      style: GoogleFonts.rubik(
-        fontSize: 18,
-        fontWeight: FontWeight.w500,
-      ),
-    );
-  }
-
-  Widget _buildBars() {
-    return Row(
-      children: [
-        Expanded(child: _buildBar(0, TapRushColors.barA)),
-        const SizedBox(width: 12),
-        Expanded(child: _buildBar(1, TapRushColors.barB)),
-        const SizedBox(width: 12),
-        Expanded(child: _buildBar(2, TapRushColors.barC)),
-      ],
-    );
-  }
-
-  Widget _buildBar(int index, Color color) {
-    bool isActive = (_activeBar == index && _state == GameState.playing);
-
-    return GestureDetector(
-      onTap: () => _onBarTapped(index),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
-          gradient: LinearGradient(
-            colors: [
-              color.withOpacity(isActive ? 0.7 : 0.3),
-              color,
-            ],
-            begin: Alignment.bottomCenter,
-            end: Alignment.topCenter,
-          ),
-          boxShadow: isActive
-              ? [
-                  BoxShadow(
-                    color: color.withOpacity(0.8),
-                    blurRadius: 24,
-                    spreadRadius: 2,
-                  ),
-                ]
-              : [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.6),
-                    blurRadius: 18,
-                    spreadRadius: 1,
-                    offset: const Offset(0, 6),
-                  ),
+          // Background Glow
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.midnight,
+                  AppColors.deepPurple.withOpacity(0.4),
                 ],
-        ),
-        child: Center(
-          child: Icon(
-            Icons.touch_app,
-            size: isActive ? 42 : 32,
-            color: TapRushColors.accent,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBottomButtons() {
-    bool canStart = (_state == GameState.ready || _state == GameState.finished);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
-        children: [
-          Expanded(
-            child: FilledButton(
-              onPressed: canStart ? _startCountdown : null,
-              style: FilledButton.styleFrom(
-                backgroundColor: TapRushColors.accent,
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                textStyle: GoogleFonts.rubik(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
               ),
-              child: Text(canStart ? 'START' : 'PLAYING…'),
             ),
           ),
-          const SizedBox(width: 12),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              _gameTimer?.cancel();
-              _countdownTimer?.cancel();
-              setState(() {
-                _state = GameState.ready;
-                _score = 0;
-                _timeLeft = gameDurationSeconds;
-              });
-            },
+
+          // Score & Lives Display
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Score: $score",
+                    style: const TextStyle(fontSize: 26, color: Colors.white),
+                  ),
+                  Text(
+                    "Lives: $lives",
+                    style: const TextStyle(fontSize: 26, color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
           ),
+
+          // Game Bars
+          ...bars.map((bar) {
+            return AnimatedPositioned(
+              duration: const Duration(milliseconds: 16),
+              top: MediaQuery.of(context).size.height * bar.y,
+              left: 20,
+              right: 20,
+              height: 50,
+              child: GestureDetector(
+                onTap: () => tapBar(bar),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: bar.color,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: bar.color.withOpacity(0.6),
+                        blurRadius: 20,
+                        spreadRadius: 4,
+                      )
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+
+          // Start Button
+          if (!gameRunning)
+            Center(
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.deepPurple,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 40, vertical: 20),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: startGame,
+                child: const Text(
+                  "START TAPRUSH",
+                  style: TextStyle(fontSize: 22, color: Colors.white),
+                ),
+              ),
+            ),
         ],
       ),
     );
