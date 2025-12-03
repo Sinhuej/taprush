@@ -2,11 +2,8 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
   runApp(const TapRushApp());
 }
 
@@ -15,470 +12,275 @@ class TapRushApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const primary = Color(0xFFFF6B3D); // neon orange from icon
-    const seed = Color(0xFF0A0E21); // dark navy background
-
     return MaterialApp(
       title: 'TapRush',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: seed).copyWith(
-          primary: primary,
-          secondary: const Color(0xFF00E0FF), // teal accent
-        ),
-        scaffoldBackgroundColor: const Color(0xFF050816),
-        textTheme: GoogleFonts.poppinsTextTheme(
-          const TextTheme(
-            bodyMedium: TextStyle(color: Colors.white),
-          ),
-        ),
         useMaterial3: true,
-      ),
-      home: const HomeScreen(),
-    );
-  }
-}
-
-enum Difficulty { easy, normal, insane }
-
-extension DifficultyLabel on Difficulty {
-  String get label {
-    switch (this) {
-      case Difficulty.easy:
-        return 'Easy';
-      case Difficulty.normal:
-        return 'Normal';
-      case Difficulty.insane:
-        return 'Insane';
-    }
-  }
-
-  double get baseSpeed {
-    switch (this) {
-      case Difficulty.easy:
-        return 0.35; // slow
-      case Difficulty.normal:
-        return 0.55;
-      case Difficulty.insane:
-        return 0.8; // fast
-    }
-  }
-
-  Duration get spawnInterval {
-    switch (this) {
-      case Difficulty.easy:
-        return const Duration(milliseconds: 850);
-      case Difficulty.normal:
-        return const Duration(milliseconds: 650);
-      case Difficulty.insane:
-        return const Duration(milliseconds: 480);
-    }
-  }
-}
-
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
-
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  Difficulty _difficulty = Difficulty.normal;
-  int _bestScore = 0;
-  bool _loadingBest = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadBestScore();
-  }
-
-  Future<void> _loadBestScore() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _bestScore = prefs.getInt('bestScore') ?? 0;
-      _loadingBest = false;
-    });
-  }
-
-  void _updateBestScore(int newBest) {
-    setState(() {
-      _bestScore = newBest;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    return Scaffold(
-      body: SafeArea(
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Color(0xFF050816),
-                Color(0xFF0B1028),
-              ],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const SizedBox(height: 40),
-              Text(
-                'TapRush',
-                style: GoogleFonts.poppins(
-                  fontSize: 40,
-                  fontWeight: FontWeight.w800,
-                  color: colors.secondary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Tap the glowing bars in rhythm.\nStay in the zone, keep the streak alive!',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(
-                  color: Colors.white70,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 30),
-              if (_loadingBest)
-                const CircularProgressIndicator()
-              else
-                Column(
-                  children: [
-                    Text(
-                      'Best Score',
-                      style: GoogleFonts.poppins(
-                        color: Colors.white70,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '$_bestScore',
-                      style: GoogleFonts.poppins(
-                        color: colors.primary,
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              const Spacer(),
-              Text(
-                'Select Difficulty',
-                style: GoogleFonts.poppins(
-                  color: Colors.white70,
-                  fontSize: 16,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                children: Difficulty.values.map((d) {
-                  final selected = d == _difficulty;
-                  return ChoiceChip(
-                    label: Text(d.label),
-                    selected: selected,
-                    onSelected: (_) {
-                      setState(() {
-                        _difficulty = d;
-                      });
-                    },
-                    selectedColor: colors.primary,
-                    labelStyle: GoogleFonts.poppins(
-                      color: selected ? Colors.black : Colors.white70,
-                    ),
-                    backgroundColor: const Color(0xFF14172F),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 32),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: colors.primary,
-                    foregroundColor: Colors.black,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                  ),
-                  onPressed: () async {
-                    final result = await Navigator.of(context).push<int>(
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            GameScreen(difficulty: _difficulty),
-                      ),
-                    );
-                    if (result != null && result > _bestScore) {
-                      _updateBestScore(result);
-                    }
-                  },
-                  child: Text(
-                    'Start Run',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Tip: Tap anywhere in a column when the bar crosses the bottom line.',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(
-                  color: Colors.white38,
-                  fontSize: 12,
-                ),
-              ),
-              const SizedBox(height: 24),
-            ],
-          ),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF7B2DFF), // purple from icon
+          brightness: Brightness.dark,
         ),
+        fontFamily: 'Roboto',
       ),
+      home: const TapRushGame(),
     );
   }
 }
 
-/// Represents one falling bar
-class NoteBar {
-  NoteBar({
-    required this.laneIndex,
-    required this.y,
-    required this.speed,
-    this.hit = false,
-  });
-
-  final int laneIndex; // 0, 1, 2
-  double y; // 0 = top, 1 = bottom
-  double speed; // logical units per second
-  bool hit;
-}
-
-class GameScreen extends StatefulWidget {
-  const GameScreen({super.key, required this.difficulty});
-
-  final Difficulty difficulty;
+class TapRushGame extends StatefulWidget {
+  const TapRushGame({super.key});
 
   @override
-  State<GameScreen> createState() => _GameScreenState();
+  State<TapRushGame> createState() => _TapRushGameState();
 }
 
-class _GameScreenState extends State<GameScreen> {
-  final List<NoteBar> _bars = [];
-  late Timer _timer;
-  final Random _random = Random();
+class _TapRushGameState extends State<TapRushGame> {
+  static const int barCount = 4;
+  static const double hitThreshold = 0.6; // how full a bar must be for HIT
+  static const Duration tick = Duration(milliseconds: 120);
 
+  final Random _rand = Random();
+
+  late List<double> _fill; // 0.0–1.0 for each bar
+  Timer? _timer;
+
+  bool _running = false;
   int _score = 0;
+  int _bestScore = 0;
   int _combo = 0;
   int _misses = 0;
-  int _bestCombo = 0;
+  int _level = 1;
 
-  // Spawn control
-  late Duration _spawnInterval;
-  Duration _elapsedSinceSpawn = Duration.zero;
-
-  // Game loop delta timing
-  late DateTime _lastTick;
-
-  // Hit feedback
-  String _statusText = '';
-  Color _statusColor = Colors.white;
-  double _laneGlowOpacity = 0.0;
-  int _glowLaneIndex = -1;
-
-  bool _isGameOver = false;
+  int? _lastTapIndex;
+  bool _lastTapHit = false;
 
   @override
   void initState() {
     super.initState();
-    _spawnInterval = widget.difficulty.spawnInterval;
-    _lastTick = DateTime.now();
-    _startLoop();
+    _resetGame(hard: true);
   }
 
   @override
   void dispose() {
-    _timer.cancel();
+    _timer?.cancel();
     super.dispose();
   }
 
-  void _startLoop() {
-    // ~60fps-ish
-    _timer = Timer.periodic(const Duration(milliseconds: 16), (timer) {
-      final now = DateTime.now();
-      final dtSeconds =
-          now.difference(_lastTick).inMilliseconds / 1000.0;
-      _lastTick = now;
-      _elapsedSinceSpawn += now.difference(now.subtract(
-          Duration(milliseconds: (dtSeconds * 1000).round())));
+  void _resetGame({bool hard = false}) {
+    _timer?.cancel();
+    _fill = List<double>.filled(barCount, 0.2);
+    _running = false;
+    _combo = 0;
+    _misses = 0;
+    _level = hard ? 1 : _level;
+    _lastTapIndex = null;
+    _lastTapHit = false;
+    if (hard) _score = 0;
+    setState(() {});
+  }
 
-      _updateBars(dtSeconds);
-      _maybeSpawnBar();
+  void _startGame() {
+    if (_running) return;
+    _running = true;
+    _timer?.cancel();
+    _timer = Timer.periodic(tick, _onTick);
+    setState(() {});
+  }
+
+  void _onTick(Timer timer) {
+    setState(() {
+      // Slowly drain bars
+      for (int i = 0; i < barCount; i++) {
+        _fill[i] = max(0, _fill[i] - 0.03);
+      }
+
+      // Randomly boost one bar
+      final int i = _rand.nextInt(barCount);
+      _fill[i] = min(1.0, _fill[i] + 0.18 + _level * 0.03);
+
+      // Level up very slowly
+      _level = 1 + _score ~/ 25;
+
+      // Game over if all bars are empty for too long
+      if (_fill.every((v) => v <= 0.05)) {
+        _running = false;
+        _timer?.cancel();
+      }
     });
   }
 
-  void _updateBars(double dt) {
-    if (_isGameOver) return;
+  void _onBarTap(int index) {
+    if (!_running) {
+      // First tap starts the game
+      _startGame();
+    }
 
-    bool shouldSetState = false;
+    final double value = _fill[index];
+    final bool hit = value >= hitThreshold;
 
-    for (final bar in _bars) {
-      bar.y += bar.speed * dt;
-      if (bar.y > 1.1 && !bar.hit) {
-        // Missed bar
-        _registerMiss();
-        bar.hit = true; // so we don’t double count
-        shouldSetState = true;
+    setState(() {
+      _lastTapIndex = index;
+      _lastTapHit = hit;
+
+      if (hit) {
+        _combo++;
+        _score += 5 + _combo; // reward streaks
+        _fill[index] = max(0.0, value - 0.4); // drain bar on successful tap
+      } else {
+        _combo = 0;
+        _misses++;
+        _score = max(0, _score - 3);
       }
-    }
 
-    _bars.removeWhere((bar) => bar.y > 1.2);
-
-    // Fade lane glow
-    if (_laneGlowOpacity > 0) {
-      _laneGlowOpacity = max(0, _laneGlowOpacity - dt * 2.5);
-      shouldSetState = true;
-    }
-
-    if (shouldSetState) {
-      setState(() {});
-    } else {
-      // Still need to repaint for movement
-      setState(() {});
-    }
+      if (_score > _bestScore) {
+        _bestScore = _score;
+      }
+    });
   }
 
-  void _maybeSpawnBar() {
-    if (_isGameOver) return;
+  Color _barColor(int index) {
+    // Match icon-ish palette: purple, teal, pink, orange
+    const List<Color> colors = [
+      Color(0xFF7B2DFF),
+      Color(0xFF00D9C0),
+      Color(0xFFFF4FA3),
+      Color(0xFFFFA726),
+    ];
+    return colors[index % colors.length];
+  }
 
-    _elapsedSinceSpawn += const Duration(milliseconds: 16);
-    if (_elapsedSinceSpawn >= _spawnInterval) {
-      _elapsedSinceSpawn = Duration.zero;
-      final lane = _random.nextInt(3);
-      final baseSpeed = widget.difficulty.baseSpeed;
-      final extraSpeed = min(0.6, _score / 1200); // slight ramp-up
-      final speed = baseSpeed + extraSpeed; // units per sec
+  Widget _buildBar(int index) {
+    final double value = _fill[index];
 
-      _bars.add(
-        NoteBar(
-          laneIndex: lane,
-          y: -0.15, // start slightly above top
-          speed: speed,
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque, // <- IMPORTANT: register taps
+        onTap: () => _onBarTap(index),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 4.0),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final double height = constraints.maxHeight;
+              final double filledHeight = height * value;
+
+              return Stack(
+                alignment: Alignment.bottomCenter,
+                children: [
+                  // Track
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(18),
+                      color: Colors.white.withOpacity(0.06),
+                    ),
+                  ),
+                  // Fill
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    curve: Curves.easeOut,
+                    width: double.infinity,
+                    height: max(4, filledHeight),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(18),
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        colors: [
+                          _barColor(index),
+                          _barColor(index).withOpacity(0.45),
+                        ],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _barColor(index).withOpacity(0.5 * value),
+                          blurRadius: 14 * value,
+                          spreadRadius: 2 * value,
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Hit zone marker
+                  Positioned(
+                    top: height * (1 - hitThreshold) - 2,
+                    left: 6,
+                    right: 6,
+                    child: Container(
+                      height: 4,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.white.withOpacity(0.28),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
         ),
-      );
-    }
+      ),
+    );
   }
 
-  void _registerHit(NoteBar bar, {required bool perfect}) {
-    bar.hit = true;
-    _score += perfect ? 3 : 1;
-    _combo += 1;
-    _bestCombo = max(_bestCombo, _combo);
-
-    _statusText = perfect ? 'PERFECT!' : 'GOOD';
-    _statusColor = perfect ? Colors.greenAccent : Colors.yellowAccent;
-  }
-
-  void _registerMiss() {
-    _combo = 0;
-    _misses += 1;
-    _statusText = 'MISS';
-    _statusColor = Colors.redAccent;
-
-    if (_misses >= 5) {
-      _endGame();
-    }
-  }
-
-  Future<void> _endGame() async {
-    if (_isGameOver) return;
-    _isGameOver = true;
-    _timer.cancel();
-
-    // Save best score
-    final prefs = await SharedPreferences.getInstance();
-    final best = prefs.getInt('bestScore') ?? 0;
-    if (_score > best) {
-      await prefs.setInt('bestScore', _score);
-    }
-
-    if (mounted) {
-      await showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) {
-          return AlertDialog(
-            backgroundColor: const Color(0xFF14172F),
-            title: Text(
-              'Run Over',
-              style: GoogleFonts.poppins(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _statRow('Score', _score),
-                _statRow('Best combo', _bestCombo),
-                _statRow('Misses', _misses),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(ctx).pop();
-                  Navigator.of(context).pop(_score);
-                },
-                child: Text(
-                  'Back',
-                  style: GoogleFonts.poppins(color: Colors.white70),
+  Widget _buildTopHud() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      child: Row(
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'TapRush v2',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.6,
                 ),
               ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(ctx).pop();
-                  _restartGame();
-                },
-                child: Text(
-                  'Play Again',
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+              Text(
+                _running ? 'Keep the beat… TAP!' : 'Tap any bar to start',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.7),
+                  fontSize: 13,
                 ),
               ),
             ],
-          );
-        },
-      );
-    }
+          ),
+          const Spacer(),
+          _statChip('LV', '$_level'),
+          const SizedBox(width: 6),
+          _statChip('BEST', '$_bestScore'),
+        ],
+      ),
+    );
   }
 
-  Widget _statRow(String label, int value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+  Widget _statChip(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        color: Colors.white.withOpacity(0.08),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.25),
+          width: 1,
+        ),
+      ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             label,
-            style: GoogleFonts.poppins(color: Colors.white70),
+            style: TextStyle(
+              fontSize: 11,
+              letterSpacing: 0.9,
+              color: Colors.white.withOpacity(0.7),
+            ),
           ),
+          const SizedBox(width: 5),
           Text(
-            '$value',
-            style: GoogleFonts.poppins(
-              color: Colors.white,
+            value,
+            style: const TextStyle(
+              fontSize: 14,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -487,266 +289,120 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  void _restartGame() {
-    setState(() {
-      _bars.clear();
-      _score = 0;
-      _combo = 0;
-      _misses = 0;
-      _bestCombo = 0;
-      _statusText = '';
-      _laneGlowOpacity = 0;
-      _glowLaneIndex = -1;
-      _isGameOver = false;
-      _elapsedSinceSpawn = Duration.zero;
-      _lastTick = DateTime.now();
-    });
-
-    _startLoop();
-  }
-
-  void _handleTap(Offset globalPos, BuildContext context) {
-    if (_isGameOver) return;
-
-    final box = context.findRenderObject() as RenderBox?;
-    if (box == null) return;
-
-    final local = box.globalToLocal(globalPos);
-    final width = box.size.width;
-    final height = box.size.height;
-
-    final laneWidth = width / 3;
-    final laneIndex = (local.dx ~/ laneWidth).clamp(0, 2);
-    const hitLine = 0.86; // 86% down the screen
-    const perfectWindow = 0.035;
-    const goodWindow = 0.08;
-
-    NoteBar? bestBar;
-    double bestDistance = 1.0;
-
-    for (final bar in _bars) {
-      if (bar.laneIndex != laneIndex || bar.hit) continue;
-      final distance = (bar.y - hitLine).abs();
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        bestBar = bar;
-      }
+  Widget _buildBottomHud() {
+    String tapText = 'No taps yet';
+    if (_lastTapIndex != null) {
+      tapText =
+          'Last tap: BAR ${_lastTapIndex! + 1} • ${_lastTapHit ? "HIT!" : "MISS"}';
     }
 
-    _glowLaneIndex = laneIndex;
-    _laneGlowOpacity = 0.7;
-
-    if (bestBar != null && bestDistance <= goodWindow) {
-      final perfect = bestDistance <= perfectWindow;
-      _registerHit(bestBar, perfect: perfect);
-    } else {
-      _registerMiss();
-    }
-
-    setState(() {});
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            tapText,
+            style: TextStyle(
+              fontSize: 14,
+              color: _lastTapIndex == null
+                  ? Colors.white.withOpacity(0.75)
+                  : (_lastTapHit ? Colors.greenAccent : Colors.redAccent),
+              fontWeight:
+                  _lastTapIndex == null ? FontWeight.w400 : FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Score: $_score',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Text(
+                'Combo: $_combo',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: _combo > 1
+                      ? Colors.lightBlueAccent
+                      : Colors.white.withOpacity(0.7),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Miss: $_misses',
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.redAccent,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton(
+                  onPressed: _running ? _resetGame : _startGame,
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    backgroundColor: const Color(0xFF7B2DFF),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                  child: Text(_running ? 'Pause & Reset' : 'Start'),
+                ),
+              ),
+            ],
+          )
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    return Scaffold(
-      body: SafeArea(
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTapDown: (details) => _handleTap(details.globalPosition, context),
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF140B33),
+            Color(0xFF260F4F),
+            Color(0xFF1B103B),
+          ],
+        ),
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
           child: Column(
             children: [
-              // Top HUD
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white70),
-                      onPressed: () {
-                        _isGameOver = true;
-                        _timer.cancel();
-                        Navigator.of(context).pop(_score);
-                      },
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'TapRush',
-                      style: GoogleFonts.poppins(
-                        color: colors.secondary,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const Spacer(),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          'Score: $_score',
-                          style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Text(
-                          'Combo: $_combo',
-                          style: GoogleFonts.poppins(
-                            color: Colors.white70,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              // Status text
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: AnimatedOpacity(
-                  opacity: _statusText.isEmpty ? 0 : 1,
-                  duration: const Duration(milliseconds: 120),
-                  child: Text(
-                    _statusText,
-                    style: GoogleFonts.poppins(
-                      color: _statusColor,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                    ),
+              _buildTopHud(),
+              const SizedBox(height: 6),
+              Expanded(
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: List.generate(barCount, _buildBar),
                   ),
                 ),
               ),
-              // Miss indicators
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(5, (i) {
-                    final filled = i < _misses;
-                    return Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 2),
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: filled ? Colors.redAccent : Colors.white24,
-                      ),
-                    );
-                  }),
-                ),
-              ),
-              // Game area
-              Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final width = constraints.maxWidth;
-                    final height = constraints.maxHeight;
-                    final laneWidth = width / 3;
-
-                    return Stack(
-                      children: [
-                        Row(
-                          children: List.generate(3, (i) {
-                            final isGlowLane = i == _glowLaneIndex;
-                            return AnimatedContainer(
-                              duration: const Duration(milliseconds: 120),
-                              width: laneWidth,
-                              decoration: BoxDecoration(
-                                border: Border(
-                                  left: i == 0
-                                      ? BorderSide.none
-                                      : BorderSide(
-                                          color: Colors.white12, width: 1),
-                                  right: BorderSide(
-                                      color: Colors.white12, width: 1),
-                                ),
-                                gradient: isGlowLane
-                                    ? LinearGradient(
-                                        colors: [
-                                          Colors.white.withOpacity(
-                                              _laneGlowOpacity * 0.09),
-                                          Colors.transparent,
-                                        ],
-                                        begin: Alignment.topCenter,
-                                        end: Alignment.bottomCenter,
-                                      )
-                                    : null,
-                              ),
-                            );
-                          }),
-                        ),
-                        // Hit line
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          top: height * 0.86,
-                          child: Container(
-                            height: 2,
-                            color: colors.primary.withOpacity(0.7),
-                          ),
-                        ),
-                        // Bars
-                        ..._bars.map((bar) {
-                          final x = bar.laneIndex * laneWidth;
-                          final y = bar.y * height;
-                          final barColor = _laneColorForIndex(bar.laneIndex);
-
-                          return Positioned(
-                            left: x + laneWidth * 0.18,
-                            width: laneWidth * 0.64,
-                            top: y,
-                            height: height * 0.16,
-                            child: Opacity(
-                              opacity: bar.hit ? 0.2 : 1,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(14),
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      barColor.withOpacity(0.95),
-                                      barColor.withOpacity(0.55),
-                                    ],
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: barColor.withOpacity(0.7),
-                                      blurRadius: 14,
-                                      spreadRadius: 1,
-                                      offset: const Offset(0, 3),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ],
-                    );
-                  },
-                ),
-              ),
+              _buildBottomHud(),
             ],
           ),
         ),
       ),
     );
   }
-
-  Color _laneColorForIndex(int lane) {
-    switch (lane) {
-      case 0:
-        return const Color(0xFF00E0FF); // teal
-      case 1:
-        return const Color(0xFFB455FF); // purple
-      case 2:
-        return const Color(0xFFFF6B3D); // orange
-      default:
-        return Colors.white;
-    }
-  }
 }
+
