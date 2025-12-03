@@ -52,7 +52,7 @@ class _TapRushGameState extends State<TapRushGame>
       barY += barSpeed * 10;
 
       if (barY > 900) {
-        barY = -Random().nextInt(400);
+        barY = -Random().nextInt(400).toDouble();
         showHit = false;
       }
     });
