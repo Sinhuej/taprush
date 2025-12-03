@@ -6,10 +6,21 @@ plugins {
 }
 
 android {
-    namespace = "com.example.taprush"
-    compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    namespace = "com.taprush.app"
+    compileSdk = 34
 
+    ndkVersion = "27.0.12077973"   // <-- ADD THIS LINE
+
+    defaultConfig {
+        applicationId = "com.taprush.app"
+        minSdk = 21
+        targetSdk = 34
+        versionCode = 1
+        versionName = "1.0.0"
+    }
+
+    // ...rest of your config
+}
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
