@@ -1,52 +1,26 @@
-name: TapRush Auto Build Pipeline
+name: taprush
+description: A fast-paced tapping rhythm game.
+publish_to: "none"
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-  workflow_dispatch:
+version: 2.0.0+2
 
-jobs:
-  build:
-    name: Build Flutter APK & AAB
-    runs-on: ubuntu-latest
+environment:
+  sdk: ">=3.5.0 <4.0.0"
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+dependencies:
+  flutter:
+    sdk: flutter
 
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
+  shared_preferences: ^2.2.3
+  google_fonts: ^6.1.0
+  cupertino_icons: ^1.0.8
 
-      - name: Install Flutter (3.38.3)
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "3.38.3"
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
 
-      - name: Flutter pub get
-        run: flutter pub get
+  flutter_lints: ^3.0.0
 
-      - name: Run tests (ignore if none)
-        run: flutter test || true
+flutter:
+  uses-material-design: true
 
-      - name: Build APK
-        run: flutter build apk --release
-
-      - name: Build AAB
-        run: flutter build appbundle --release
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: taprush-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
-
-      - name: Upload AAB
-        uses: actions/upload-artifact@v4
-        with:
-          name: taprush-aab
-          path: build/app/outputs/bundle/release/app-release.aab
