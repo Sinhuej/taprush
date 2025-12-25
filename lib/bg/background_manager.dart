@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'background_store.dart';
 
@@ -34,16 +35,20 @@ class BackgroundManager {
   // === Rendering ===
 
   Widget buildForStage(int stage) {
-    // If user supplied images exist, cycle them by stage
+    // If user supplied images exist AND file exists, render it
     if (_paths.isNotEmpty) {
       final idx = stage % _paths.length;
-      return Image.asset(
-        _paths[idx],
-        fit: BoxFit.cover,
-      );
+      final file = File(_paths[idx]);
+
+      if (file.existsSync()) {
+        return Image.file(
+          file,
+          fit: BoxFit.cover,
+        );
+      }
     }
 
-    // Fallback gradient (CI-safe, no assets required)
+    // Fallback gradient (always safe)
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
