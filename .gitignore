@@ -1,0 +1,18 @@
+# Dart / Flutter
+.build/
+.dart_tool/
+.packages
+.pub-cache/
+pubspec.lock
+
+# IDEs
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Android / iOS
+android/build/
+ios/Pods/
+ios/.symlinks/
