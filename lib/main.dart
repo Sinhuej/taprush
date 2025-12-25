@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'game/taprush_game_screen.dart';
 
-void main() {
+Future<void> main() async {
+  // REQUIRED for plugins & platform channels in release builds
+  WidgetsFlutterBinding.ensureInitialized();
+
   runApp(const TapRushApp());
 }
 
