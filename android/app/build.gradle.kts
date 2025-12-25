@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.taprush.app"
-    compileSdk = 34
+    compileSdk = 35
 
     // Match plugin NDK requirements (path_provider, shared_preferences)
     ndkVersion = "27.0.12077973"
