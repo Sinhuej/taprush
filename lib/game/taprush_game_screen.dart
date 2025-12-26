@@ -1,3 +1,5 @@
+import '../ui/start_overlay.dart';
+import '../game/game_phase.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 
@@ -33,10 +35,21 @@ class TapRushGameScreen extends StatefulWidget {
   const TapRushGameScreen({super.key});
 
   @override
+  void startGame() {
+    setState(() {
+      phase = GamePhase.playing;
+      strikes = 0;
+      score = 0;
+      stage = 0;
+    });
+  }
+
   State<TapRushGameScreen> createState() => _TapRushGameScreenState();
 }
 
 class _TapRushGameScreenState extends State<TapRushGameScreen> {
+  GamePhase phase = GamePhase.idle;
+
   static const int laneCount = 6;
 
   late final TileEngine engine;
@@ -69,6 +82,15 @@ class _TapRushGameScreenState extends State<TapRushGameScreen> {
   bool _epicRetryDialogShowing = false;
 
   @override
+  void startGame() {
+    setState(() {
+      phase = GamePhase.playing;
+      strikes = 0;
+      score = 0;
+      stage = 0;
+    });
+  }
+
   void initState() {
     super.initState();
 
@@ -180,6 +202,15 @@ class _TapRushGameScreenState extends State<TapRushGameScreen> {
   }
 
   @override
+  void startGame() {
+    setState(() {
+      phase = GamePhase.playing;
+      strikes = 0;
+      score = 0;
+      stage = 0;
+    });
+  }
+
   void dispose() {
     _timer?.cancel();
     super.dispose();
@@ -285,6 +316,15 @@ class _TapRushGameScreenState extends State<TapRushGameScreen> {
   int _playAgainCount = 0;
 
   @override
+  void startGame() {
+    setState(() {
+      phase = GamePhase.playing;
+      strikes = 0;
+      score = 0;
+      stage = 0;
+    });
+  }
+
   Widget build(BuildContext context) {
     final snap = engine.snapshot();
     final bgWidget = bg.buildForStage(snap.stage);
