@@ -1,0 +1,4 @@
+enum ColorMode {
+  mono,
+  multi,
+}

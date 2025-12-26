@@ -11,8 +11,8 @@ import '../ui/board.dart';
 import '../ui/game_over_overlay.dart';
 import '../ui/hud.dart';
 import '../ui/start_overlay.dart';
-
-const bool kEnableSecretCheatGesture = true;
+import '../visuals/color_mode.dart';
+import '../economy/cosmetic_unlocks.dart';
 
 class TapRushGameScreen extends StatefulWidget {
   const TapRushGameScreen({super.key});
@@ -23,102 +23,78 @@ class TapRushGameScreen extends StatefulWidget {
 
 class _TapRushGameScreenState extends State<TapRushGameScreen> {
   final GameConfig config = const GameConfig();
+  final CosmeticUnlocks cosmetics = CosmeticUnlocks();
+
   late final TileEngine engine;
+  final CheatDetector cheat = CheatDetector();
+  final CheatSequence cheatSeq = CheatSequence();
 
   GamePhase phase = GamePhase.idle;
+  bool cheatActive = false;
 
-  Timer? _timer;
-  DateTime _last = DateTime.now();
-
-  // Anti-cheat
-  final CheatDetector _cheat = CheatDetector();
-  final CheatSequence _cheatSeq = CheatSequence();
-  bool _cheatActive = false;
-  bool _cheatTriggered = false;
+  Timer? timer;
+  DateTime last = DateTime.now();
 
   @override
   void initState() {
     super.initState();
-
     engine = TileEngine(
       laneCount: config.laneCount,
       maxStrikes: config.maxStrikes,
     );
     engine.reset();
-
-    _last = DateTime.now();
-    _timer = Timer.periodic(const Duration(milliseconds: 16), (_) => _tick());
+    timer = Timer.periodic(const Duration(milliseconds: 16), (_) => tick());
   }
 
-  void _tick() {
-    if (!mounted) return;
-    if (_cheatActive) return;
-    if (phase != GamePhase.playing) return;
+  void tick() {
+    if (!mounted || phase != GamePhase.playing || cheatActive) return;
 
     final now = DateTime.now();
-    final dt = now.difference(_last).inMilliseconds / 1000.0;
-    _last = now;
+    final dt = now.difference(last).inMilliseconds / 1000.0;
+    last = now;
 
-    final screenH = MediaQuery.of(context).size.height;
-    final speed = config.baseSpeed + (engine.score * config.rampPerScore);
+    final h = MediaQuery.of(context).size.height;
+    final speed = config.baseSpeed + engine.score * config.rampPerScore;
 
-    engine.tick(
-      dt: dt,
-      screenH: screenH,
-      speedPxPerSec: speed,
-    );
+    engine.tick(dt: dt, screenH: h, speedPxPerSec: speed);
 
     if (engine.gameOver) {
       setState(() => phase = GamePhase.gameOver);
-      return;
+    } else {
+      setState(() {});
     }
-
-    setState(() {});
   }
 
-  void _start() {
+  void start() {
     engine.reset();
-    _cheat.reset();
-    _cheatActive = false;
-    _cheatTriggered = false;
+    cheat.reset();
+    cheatActive = false;
     setState(() => phase = GamePhase.playing);
   }
 
-  void _restart() => _start();
-
-  Future<void> _triggerCheatSequence() async {
-    if (_cheatTriggered) return;
-
-    _cheatTriggered = true;
-    _cheatActive = true;
+  Future<void> triggerCheat() async {
+    cheatActive = true;
     setState(() {});
-
-    await _cheatSeq.run(
-      totalMs: 1000, // 🔥 1 second cinematic
-      onTick: () {
-        if (mounted) setState(() {});
-      },
+    await cheatSeq.run(
+      totalMs: 3000,
+      onTick: () => mounted ? setState(() {}) : null,
     );
-
-    if (!mounted) return;
-    setState(() => phase = GamePhase.gameOver);
+    if (mounted) setState(() => phase = GamePhase.gameOver);
   }
 
-  void _onTapDown(TapDownDetails d) {
-    if (phase != GamePhase.playing) return;
-    if (_cheatActive) return;
+  void tap(TapDownDetails d) {
+    if (phase != GamePhase.playing || cheatActive) return;
 
-    _cheat.recordTap(now: DateTime.now(), perfectHit: false);
-
-    if (_cheat.cheatingDetected) {
-      _triggerCheatSequence();
+    cheat.recordTap(now: DateTime.now(), perfectHit: false);
+    if (cheat.cheatingDetected) {
+      triggerCheat();
       return;
     }
 
-    final size = MediaQuery.of(context).size;
+    final w = MediaQuery.of(context).size.width;
     final lane = resolveLane(
       tapX: d.localPosition.dx,
-      screenW: size.width,
+      screenW: w,
       laneCount: config.laneCount,
     );
 
@@ -128,36 +104,16 @@ class _TapRushGameScreenState extends State<TapRushGameScreen> {
       maxDistancePx: engine.tileHeight * 0.9,
     );
 
-    if (engine.gameOver) {
-      setState(() => phase = GamePhase.gameOver);
-    } else {
-      setState(() {});
-    }
-  }
-
-  Future<void> _onSecretLongPress() async {
-    if (!kEnableSecretCheatGesture) return;
-    if (phase != GamePhase.playing) return;
-    if (_cheatActive) return;
-
-    await _triggerCheatSequence();
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
     final snap = engine.snapshot();
-    final displayScore = _cheatTriggered ? 0 : snap.score;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTapDown: _onTapDown,
-      onLongPress: _onSecretLongPress,
+      onTapDown: tap,
       child: Scaffold(
         backgroundColor: const Color(0xFF0D1117),
         body: Stack(
@@ -165,23 +121,26 @@ class _TapRushGameScreenState extends State<TapRushGameScreen> {
             Board(
               laneCount: config.laneCount,
               tiles: snap.tiles,
-              cheatSeq: _cheatActive ? _cheatSeq : null,
+              cheatSeq: cheatActive ? cheatSeq : null,
+              colorMode: cosmetics.multiColorUnlocked
+                  ? ColorMode.multi
+                  : ColorMode.mono,
             ),
 
             Hud(
-              score: displayScore,
+              score: snap.score,
               strikes: snap.strikes,
               maxStrikes: config.maxStrikes,
             ),
 
             if (phase == GamePhase.idle)
-              StartOverlay(onStart: _start),
+              StartOverlay(onStart: start),
 
             if (phase == GamePhase.gameOver)
               GameOverOverlay(
-                score: displayScore,
+                score: snap.score,
                 strikes: snap.strikes,
-                onRestart: _restart,
+                onRestart: start,
               ),
           ],
         ),
