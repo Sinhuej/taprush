@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 class StartOverlay extends StatelessWidget {
   final VoidCallback onStart;
-
   const StartOverlay({super.key, required this.onStart});
 
   @override
@@ -14,14 +13,11 @@ class StartOverlay extends StatelessWidget {
           child: GestureDetector(
             onTap: onStart,
             child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 32,
-                vertical: 16,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(color: Colors.white24),
+                color: Colors.white.withOpacity(0.1),
               ),
               child: const Text(
                 'Tap to Start',
@@ -29,7 +25,6 @@ class StartOverlay extends StatelessWidget {
                   fontSize: 24,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
-                  letterSpacing: 1.1,
                 ),
               ),
             ),

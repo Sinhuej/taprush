@@ -35,13 +35,6 @@ class TapRushGameScreen extends StatefulWidget {
   const TapRushGameScreen({super.key});
 
   @override
-  void startGame() {
-    setState(() {
-      phase = GamePhase.playing;
-      strikes = 0;
-      score = 0;
-      stage = 0;
-    });
   }
 
   State<TapRushGameScreen> createState() => _TapRushGameScreenState();
@@ -82,13 +75,6 @@ class _TapRushGameScreenState extends State<TapRushGameScreen> {
   bool _epicRetryDialogShowing = false;
 
   @override
-  void startGame() {
-    setState(() {
-      phase = GamePhase.playing;
-      strikes = 0;
-      score = 0;
-      stage = 0;
-    });
   }
 
   void initState() {
@@ -202,13 +188,6 @@ class _TapRushGameScreenState extends State<TapRushGameScreen> {
   }
 
   @override
-  void startGame() {
-    setState(() {
-      phase = GamePhase.playing;
-      strikes = 0;
-      score = 0;
-      stage = 0;
-    });
   }
 
   void dispose() {
@@ -316,13 +295,6 @@ class _TapRushGameScreenState extends State<TapRushGameScreen> {
   int _playAgainCount = 0;
 
   @override
-  void startGame() {
-    setState(() {
-      phase = GamePhase.playing;
-      strikes = 0;
-      score = 0;
-      stage = 0;
-    });
   }
 
   Widget build(BuildContext context) {
@@ -337,6 +309,9 @@ class _TapRushGameScreenState extends State<TapRushGameScreen> {
           behavior: HitTestBehavior.opaque,
           onTapDown: _handleTap,
           child: Stack(
+        if (phase == GamePhase.idle)
+          StartOverlay(onStart: () => setState(() => phase = GamePhase.playing)),
+
             children: [
               Positioned.fill(child: bgWidget),
               Positioned.fill(child: Container(color: Colors.black.withOpacity(0.20))),
