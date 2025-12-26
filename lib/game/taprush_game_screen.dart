@@ -12,6 +12,8 @@ import '../ui/game_over_overlay.dart';
 import '../ui/hud.dart';
 import '../ui/start_overlay.dart';
 
+const bool kEnableSecretCheatGesture = true;
+
 class TapRushGameScreen extends StatefulWidget {
   const TapRushGameScreen({super.key});
 
@@ -37,6 +39,7 @@ class _TapRushGameScreenState extends State<TapRushGameScreen> {
   @override
   void initState() {
     super.initState();
+
     engine = TileEngine(
       laneCount: config.laneCount,
       maxStrikes: config.maxStrikes,
@@ -50,22 +53,26 @@ class _TapRushGameScreenState extends State<TapRushGameScreen> {
   void _tick() {
     if (!mounted) return;
     if (_cheatActive) return;
+    if (phase != GamePhase.playing) return;
 
     final now = DateTime.now();
     final dt = now.difference(_last).inMilliseconds / 1000.0;
     _last = now;
 
-    if (phase != GamePhase.playing) return;
-
     final screenH = MediaQuery.of(context).size.height;
     final speed = config.baseSpeed + (engine.score * config.rampPerScore);
 
-    engine.tick(dt: dt, screenH: screenH, speedPxPerSec: speed);
+    engine.tick(
+      dt: dt,
+      screenH: screenH,
+      speedPxPerSec: speed,
+    );
 
     if (engine.gameOver) {
       setState(() => phase = GamePhase.gameOver);
       return;
     }
+
     setState(() {});
   }
 
@@ -77,22 +84,17 @@ class _TapRushGameScreenState extends State<TapRushGameScreen> {
     setState(() => phase = GamePhase.playing);
   }
 
-  void _restart() {
-    engine.reset();
-    _cheat.reset();
-    _cheatActive = false;
-    _cheatTriggered = false;
-    setState(() => phase = GamePhase.playing);
-  }
+  void _restart() => _start();
 
   Future<void> _triggerCheatSequence() async {
     if (_cheatTriggered) return;
+
     _cheatTriggered = true;
     _cheatActive = true;
     setState(() {});
 
     await _cheatSeq.run(
-      totalMs: 3000,
+      totalMs: 1000, // 🔥 1 second cinematic
       onTick: () {
         if (mounted) setState(() {});
       },
@@ -120,11 +122,10 @@ class _TapRushGameScreenState extends State<TapRushGameScreen> {
       laneCount: config.laneCount,
     );
 
-    final maxDist = (engine.tileHeight * 0.80) + 24.0;
     engine.handleLaneTapAnywhere(
       lane: lane,
       tapY: d.localPosition.dy,
-      maxDistancePx: maxDist,
+      maxDistancePx: engine.tileHeight * 0.9,
     );
 
     if (engine.gameOver) {
@@ -132,6 +133,14 @@ class _TapRushGameScreenState extends State<TapRushGameScreen> {
     } else {
       setState(() {});
     }
+  }
+
+  Future<void> _onSecretLongPress() async {
+    if (!kEnableSecretCheatGesture) return;
+    if (phase != GamePhase.playing) return;
+    if (_cheatActive) return;
+
+    await _triggerCheatSequence();
   }
 
   @override
@@ -148,6 +157,7 @@ class _TapRushGameScreenState extends State<TapRushGameScreen> {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapDown: _onTapDown,
+      onLongPress: _onSecretLongPress,
       child: Scaffold(
         backgroundColor: const Color(0xFF0D1117),
         body: Stack(
