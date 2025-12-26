@@ -14,15 +14,15 @@ class CheatSequence {
 
   Future<void> run({
     required int totalMs,
-    required VoidCallback onTick,
+    required void Function() onTick,
   }) async {
     if (_running) return;
     _running = true;
 
-    // Phase timings (ms)
-    final pullMs = (totalMs * 0.45).round();     // ~450ms
-    final compressMs = (totalMs * 0.30).round(); // ~300ms
-    final explodeMs = totalMs - pullMs - compressMs; // ~250ms
+    // Phase timing (TOTAL = 3000ms)
+    final pullMs = (totalMs * 0.45).round();     // ~1350ms
+    final compressMs = (totalMs * 0.35).round(); // ~1050ms
+    final explodeMs = totalMs - pullMs - compressMs; // ~600ms
 
     Future<void> runPhase(
       CheatVisualPhase p,
@@ -32,7 +32,6 @@ class CheatSequence {
       progress = 0.0;
 
       final start = DateTime.now();
-      final end = start.add(Duration(milliseconds: durationMs));
 
       while (true) {
         final now = DateTime.now();
@@ -41,7 +40,7 @@ class CheatSequence {
 
         onTick();
 
-        if (now.isAfter(end)) break;
+        if (elapsed >= durationMs) break;
         await Future.delayed(const Duration(milliseconds: 16)); // ~60fps
       }
 
