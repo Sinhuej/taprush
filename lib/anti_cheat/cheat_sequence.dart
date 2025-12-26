@@ -8,37 +8,57 @@ enum CheatVisualPhase {
 
 class CheatSequence {
   CheatVisualPhase phase = CheatVisualPhase.pullIn;
-  double progress = 0.0; // 0..1
-  bool completed = false;
+  double progress = 0.0;
+
+  bool _running = false;
 
   Future<void> run({
-    required void Function() onTick,
-    int totalMs = 3000,
+    required int totalMs,
+    required VoidCallback onTick,
   }) async {
-    const int stepMs = 16;
-    int elapsed = 0;
+    if (_running) return;
+    _running = true;
 
-    completed = false;
-    progress = 0.0;
-    phase = CheatVisualPhase.pullIn;
+    // Phase timings (ms)
+    final pullMs = (totalMs * 0.45).round();     // ~450ms
+    final compressMs = (totalMs * 0.30).round(); // ~300ms
+    final explodeMs = totalMs - pullMs - compressMs; // ~250ms
 
-    while (elapsed < totalMs) {
-      elapsed += stepMs;
-      progress = elapsed / totalMs;
+    Future<void> runPhase(
+      CheatVisualPhase p,
+      int durationMs,
+    ) async {
+      phase = p;
+      progress = 0.0;
 
-      if (progress < 0.34) {
-        phase = CheatVisualPhase.pullIn;
-      } else if (progress < 0.67) {
-        phase = CheatVisualPhase.compress;
-      } else {
-        phase = CheatVisualPhase.explode;
+      final start = DateTime.now();
+      final end = start.add(Duration(milliseconds: durationMs));
+
+      while (true) {
+        final now = DateTime.now();
+        final elapsed = now.difference(start).inMilliseconds;
+        progress = (elapsed / durationMs).clamp(0.0, 1.0);
+
+        onTick();
+
+        if (now.isAfter(end)) break;
+        await Future.delayed(const Duration(milliseconds: 16)); // ~60fps
       }
 
+      progress = 1.0;
       onTick();
-      await Future.delayed(const Duration(milliseconds: stepMs));
     }
 
-    completed = true;
-    onTick();
+    await runPhase(CheatVisualPhase.pullIn, pullMs);
+    await runPhase(CheatVisualPhase.compress, compressMs);
+    await runPhase(CheatVisualPhase.explode, explodeMs);
+
+    _running = false;
+  }
+
+  void reset() {
+    phase = CheatVisualPhase.pullIn;
+    progress = 0.0;
+    _running = false;
   }
 }
