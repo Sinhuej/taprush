@@ -1,4 +1,4 @@
-package com.example.taprush
+package com.taprush.app
 
 import io.flutter.embedding.android.FlutterActivity
 
