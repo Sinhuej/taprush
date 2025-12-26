@@ -1,1 +1,0 @@
-enum ScrollDirection { down, up }

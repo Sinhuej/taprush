@@ -1,29 +1,18 @@
 import 'package:flutter/material.dart';
-import '../game/models.dart';
-import '../skins/skin.dart';
-import '../game/scroll_direction.dart';
+import '../engine/models.dart';
 
 class Board extends StatelessWidget {
   final int laneCount;
   final List<Tile> tiles;
-
-  // zones:
-  final double topZoneTop;
-  final double topZoneBottom;
-  final double bottomZoneTop;
-  final double bottomZoneBottom;
-
-  final Skin skin;
+  final double hitTop;
+  final double hitBottom;
 
   const Board({
     super.key,
     required this.laneCount,
     required this.tiles,
-    required this.topZoneTop,
-    required this.topZoneBottom,
-    required this.bottomZoneTop,
-    required this.bottomZoneBottom,
-    required this.skin,
+    required this.hitTop,
+    required this.hitBottom,
   });
 
   @override
@@ -33,65 +22,43 @@ class Board extends StatelessWidget {
       final h = c.maxHeight;
       final laneW = w / laneCount;
 
-      final colorA = Color(skin.colorA);
-      final colorB = Color(skin.colorB);
-
       return Stack(
         children: [
-          for (int i = 0; i < laneCount; i++)
+          // Background
+          Container(color: const Color(0xFF0D1117)),
+
+          // Lane dividers
+          for (int i = 1; i < laneCount; i++)
             Positioned(
               left: i * laneW,
               top: 0,
-              width: laneW,
-              height: h,
-              child: Container(
-                decoration: BoxDecoration(
-                  border: Border(
-                    right: BorderSide(color: Colors.white.withOpacity(0.08)),
-                  ),
-                ),
-              ),
+              bottom: 0,
+              child: Container(width: 1, color: Colors.white12),
             ),
 
-          // Top tap zone
+          // Hit zone
           Positioned(
-            top: topZoneTop,
             left: 0,
             right: 0,
-            height: (topZoneBottom - topZoneTop).clamp(0, double.infinity),
-            child: Container(color: Colors.white.withOpacity(0.05)),
+            top: hitTop,
+            child: Container(
+              height: (hitBottom - hitTop).clamp(0, h),
+              color: Colors.white10,
+            ),
           ),
 
-          // Bottom tap zone
-          Positioned(
-            top: bottomZoneTop,
-            left: 0,
-            right: 0,
-            height: (bottomZoneBottom - bottomZoneTop).clamp(0, double.infinity),
-            child: Container(color: Colors.white.withOpacity(0.05)),
-          ),
-
+          // Tiles
           for (final t in tiles)
             Positioned(
-              left: t.lane * laneW + 6,
+              left: t.lane * laneW + 8,
               top: t.y,
-              width: laneW - 12,
-              height: t.height,
               child: Container(
+                width: laneW - 16,
+                height: t.height,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
-                  gradient: LinearGradient(
-                    begin: t.dir == ScrollDirection.down ? Alignment.topLeft : Alignment.bottomLeft,
-                    end: t.dir == ScrollDirection.down ? Alignment.bottomRight : Alignment.topRight,
-                    colors: [colorA, colorB],
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      blurRadius: skin.glow ? 18 : 10,
-                      spreadRadius: skin.glow ? 2 : 1,
-                      color: Colors.black.withOpacity(0.35),
-                    ),
-                  ],
+                  color: Colors.white.withOpacity(0.18),
+                  border: Border.all(color: Colors.white24),
                 ),
               ),
             ),
