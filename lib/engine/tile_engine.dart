@@ -16,7 +16,7 @@ class TileEngine {
 
   // spawn tuning
   double _spawnTimer = 0;
-  double spawnEverySec = 0.55; // later can tighten
+  double spawnEverySec = 0.58;
 
   // tile tuning
   double tileHeight = 140;
@@ -44,22 +44,17 @@ class TileEngine {
   }) {
     if (gameOver) return;
 
-    // move tiles
     for (final t in _tiles) {
       t.y += speedPxPerSec * dt;
     }
 
-    // remove tiles that fell past bottom (strike)
+    // tile exits bottom => strike
     _tiles.removeWhere((t) {
       final gone = t.y > screenH + 40;
-      if (gone) {
-        strikes += 1;
-        if (strikes >= maxStrikes) gameOver = true;
-      }
+      if (gone) _strike();
       return gone;
     });
 
-    // spawn logic
     _spawnTimer += dt;
     if (_spawnTimer >= spawnEverySec) {
       _spawnTimer = 0;
@@ -77,34 +72,31 @@ class TileEngine {
     ));
   }
 
-  bool handleLaneTap({
+  void _strike() {
+    strikes += 1;
+    if (strikes >= maxStrikes) gameOver = true;
+  }
+
+  /// Tap-anywhere behavior:
+  /// - Lane is chosen by UI (based on tap X)
+  /// - We select the tile in that lane whose CENTER is closest to tapY
+  /// - We only allow a hit if it's within [maxDistancePx] of tapY
+  /// - Otherwise it's a miss (strike)
+  bool handleLaneTapAnywhere({
     required int lane,
-    required double hitTop,
-    required double hitBottom,
-    required double leniencyPx,
+    required double tapY,
+    required double maxDistancePx,
   }) {
     if (gameOver) return false;
 
-    // choose the tile in that lane closest to the hit zone
     Tile? best;
     double bestDist = 1e18;
 
     for (final t in _tiles) {
       if (t.lane != lane) continue;
 
-      final tileTop = t.y;
-      final tileBottom = t.y + t.height;
-
-      // overlap check with leniency
-      final overlaps = (tileBottom >= (hitTop - leniencyPx)) &&
-          (tileTop <= (hitBottom + leniencyPx));
-
-      if (!overlaps) continue;
-
-      // distance to center of hit zone
-      final tileCenter = (tileTop + tileBottom) / 2.0;
-      final zoneCenter = (hitTop + hitBottom) / 2.0;
-      final dist = (tileCenter - zoneCenter).abs();
+      final centerY = t.y + (t.height / 2.0);
+      final dist = (centerY - tapY).abs();
 
       if (dist < bestDist) {
         bestDist = dist;
@@ -112,16 +104,15 @@ class TileEngine {
       }
     }
 
-    if (best != null) {
-      _tiles.remove(best);
-      score += 1;
-      return true;
+    // A: miss if not reasonably close
+    if (best == null || bestDist > maxDistancePx) {
+      _strike();
+      return false;
     }
 
-    // miss -> strike
-    strikes += 1;
-    if (strikes >= maxStrikes) gameOver = true;
-    return false;
+    _tiles.remove(best);
+    score += 1;
+    return true;
   }
 
   EngineSnapshot snapshot() {
