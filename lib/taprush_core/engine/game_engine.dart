@@ -93,7 +93,7 @@ class TapRushEngine {
 
   void _trySpawn(LaneGeometry g, int lane, FlowDir dir) {
     final count = entities.where((e) => e.lane == lane && e.dir == dir).length;
-    if (count >= 2) return; // 🔒 HARD CAP
+    if (count >= 2) return; // HARD CAP
 
     final isBomb = _rng.nextDouble() < 0.08;
     final y = dir == FlowDir.down ? -g.tileHeight : g.height + g.tileHeight;
@@ -121,7 +121,6 @@ class TapRushEngine {
 
     if (!res.hit) return res;
 
-    // Remove target
     entities.removeWhere((e) =>
         e.lane == g.laneOfX(gesture.startX) &&
         e.containsTap(g: g, tapX: gesture.startX, tapY: gesture.startY));
@@ -149,5 +148,14 @@ class TapRushEngine {
     }
 
     return res;
+  }
+
+  // ✅ RESTORED — UI depends on this
+  int backgroundTier() {
+    if (_time < 10) return 0;
+    if (_time < 25) return 1;
+    if (_time < 45) return 2;
+    if (_time < 70) return 3;
+    return 4;
   }
 }
