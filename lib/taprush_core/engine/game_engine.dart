@@ -1,141 +1,102 @@
 import 'dart:math';
 import 'models.dart';
-import 'input_resolver.dart';
 import 'gesture.dart';
-
-class EngineConfig {
-  final int maxStrikes;
-  final double baseSpeedPxPerSec;
-  final double speedRampPerSec;
-  final double spawnEverySec;
-  final double bombChanceBase;
-  final double bombChanceRampPerSec;
-
-  const EngineConfig({
-    this.maxStrikes = 5,
-    this.baseSpeedPxPerSec = 240,
-    this.speedRampPerSec = 9,
-    this.spawnEverySec = 0.48,
-    this.bombChanceBase = 0.06,
-    this.bombChanceRampPerSec = 0.002,
-  });
-}
+import 'input_resolver.dart';
 
 class TapRushEngine {
   final _rng = Random();
-  final EngineConfig cfg;
-
-  TapRushEngine({EngineConfig? config}) : cfg = config ?? const EngineConfig();
-
-  GameMode mode = GameMode.normal;
-  LaneGeometry? _g;
-
   final RunStats stats = RunStats();
-  final List<TapEntity> entities = [];
   final InputResolver input = InputResolver();
 
-  double _t = 0.0;
-  double _spawnTimerDown = 0.0;
-  double _spawnTimerUp = 0.0;
+  LaneGeometry? _g;
+  GameMode mode = GameMode.normal;
+
+  final List<TapEntity> entities = [];
+
+  // Epic lanes
+  Set<int> _epicDown = {};
+  Set<int> _epicUp = {};
+
+  double _time = 0;
+  double _spawnTimer = 0;
   int _id = 0;
 
-  bool get isGameOver => stats.strikes >= cfg.maxStrikes;
-  int get coinMult => mode == GameMode.reverse ? 2 : 1;
+  static const int maxStrikes = 5;
+  static const int maxBonusLives = 3;
 
   void setGeometry(LaneGeometry g) => _g = g;
 
   void reset({required GameMode newMode}) {
     mode = newMode;
     entities.clear();
+    _time = 0;
+    _spawnTimer = 0;
+    _id = 0;
 
-    stats.score = 0;
-    stats.strikes = 0;
-    stats.coins = 0;
-    stats.perfectStreak = 0;
-    stats.totalHits = 0;
-    stats.perfectHits = 0;
+    stats
+      ..score = 0
+      ..coins = 0
+      ..strikes = 0
+      ..totalHits = 0
+      ..perfectHits = 0
+      ..bombsFlicked = 0
+      ..bonusLivesEarned = 0;
 
-    _t = 0.0;
-    _spawnTimerDown = 0.0;
-    _spawnTimerUp = 0.0;
+    if (mode == GameMode.epic) {
+      final lanes = List.generate(kLaneCount, (i) => i)..shuffle(_rng);
+      _epicDown = lanes.take(3).toSet();
+      _epicUp = lanes.skip(3).toSet();
+    }
   }
 
-  double _speed() => cfg.baseSpeedPxPerSec + (_t * cfg.speedRampPerSec);
-
-  double _bombChance() {
-    final c = cfg.bombChanceBase + (_t * cfg.bombChanceRampPerSec);
-    return c.clamp(0.06, 0.35);
-  }
+  bool get isGameOver => stats.strikes >= maxStrikes;
 
   void tick(double dt) {
     final g = _g;
     if (g == null || isGameOver) return;
 
-    _t += dt;
+    _time += dt;
+    _spawnTimer += dt;
 
-    final speed = _speed();
-    final bombChance = _bombChance();
+    final speed = 240 + _time * 8;
 
-    _spawnTimerDown += dt;
-    _spawnTimerUp += dt;
-
-    final wantDown = (mode == GameMode.normal) || (mode == GameMode.epic);
-    final wantUpBase = (mode == GameMode.reverse) || (mode == GameMode.epic);
-
-    // Epic staging
-    bool wantUp = wantUpBase;
-    double upSpawnEvery = cfg.spawnEverySec;
-
-    if (mode == GameMode.epic) {
-      if (_t < 8.0) {
-        wantUp = false;
-      } else if (_t < 20.0) {
-        wantUp = true;
-        upSpawnEvery = cfg.spawnEverySec * 2.0; // half rate
-      } else {
-        wantUp = true;
-        upSpawnEvery = cfg.spawnEverySec; // full
-      }
-    }
-
-    if (wantDown) {
-      while (_spawnTimerDown >= cfg.spawnEverySec) {
-        _spawnTimerDown -= cfg.spawnEverySec;
-        _spawnOne(g, FlowDir.down, bombChance);
-      }
-    }
-
-    if (wantUp) {
-      while (_spawnTimerUp >= upSpawnEvery) {
-        _spawnTimerUp -= upSpawnEvery;
-        _spawnOne(g, FlowDir.up, bombChance);
-      }
+    if (_spawnTimer >= 0.45) {
+      _spawnTimer = 0;
+      _spawn(g);
     }
 
     for (final e in entities) {
-      if (e.dir == FlowDir.down) {
-        e.y += speed * dt;
-      } else {
-        e.y -= speed * dt;
-      }
+      e.y += e.dir == FlowDir.down ? speed * dt : -speed * dt;
     }
 
-    // Misses cause strikes for tiles only
     entities.removeWhere((e) {
-      final missed = e.isMissed(g);
-      if (missed && !e.isBomb) {
-        stats.onStrike();
-      }
-      return missed;
+      if (!e.isMissed(g)) return false;
+      if (!e.isBomb) stats.onStrike();
+      return true;
     });
   }
 
-  void _spawnOne(LaneGeometry g, FlowDir dir, double bombChance) {
-    final canBomb = entities.isNotEmpty || _t > 3.0;
-    final isBomb = canBomb && (_rng.nextDouble() < bombChance);
+  void _spawn(LaneGeometry g) {
+    if (mode == GameMode.epic) {
+      for (final l in _epicDown) {
+        _trySpawn(g, l, FlowDir.down);
+      }
+      for (final l in _epicUp) {
+        _trySpawn(g, l, FlowDir.up);
+      }
+    } else {
+      final dir = mode == GameMode.reverse ? FlowDir.up : FlowDir.down;
+      final lane = _rng.nextInt(kLaneCount);
+      _trySpawn(g, lane, dir);
+    }
+  }
 
-    final lane = _rng.nextInt(kLaneCount);
-    final startY = dir == FlowDir.down ? -g.tileHeight : g.height + g.tileHeight;
+  void _trySpawn(LaneGeometry g, int lane, FlowDir dir) {
+    final count = entities.where((e) => e.lane == lane && e.dir == dir).length;
+    if (count >= 2) return; // 🔒 HARD CAP
+
+    final isBomb = _rng.nextDouble() < 0.08;
+    final y = dir == FlowDir.down ? -g.tileHeight : g.height + g.tileHeight;
 
     entities.add(
       TapEntity(
@@ -143,7 +104,7 @@ class TapRushEngine {
         lane: lane,
         dir: dir,
         isBomb: isBomb,
-        y: startY,
+        y: y,
       ),
     );
   }
@@ -152,43 +113,41 @@ class TapRushEngine {
     final g = _g;
     if (g == null || isGameOver) return const InputResult.miss();
 
-    final res = input.resolveGesture(g: g, entities: entities, gesture: gesture);
+    final res = input.resolve(
+      g: g,
+      entities: List.of(entities), // snapshot
+      gesture: gesture,
+    );
+
     if (!res.hit) return res;
 
-    // Remove best match in that lane at start point
-    final lane = g.laneOfX(gesture.startX);
-    TapEntity? target;
-    for (final e in entities) {
-      if (e.lane != lane) continue;
-      if (e.containsTap(g: g, tapX: gesture.startX, tapY: gesture.startY)) {
-        target = e;
-        break;
-      }
-    }
-    if (target != null) entities.remove(target);
+    // Remove target
+    entities.removeWhere((e) =>
+        e.lane == g.laneOfX(gesture.startX) &&
+        e.containsTap(g: g, tapX: gesture.startX, tapY: gesture.startY));
 
-    if (res.bomb && res.flicked) {
-      // Safe removal
-      return res;
-    }
     if (res.bomb) {
-      stats.onStrike();
+      if (res.flicked) {
+        stats.coins += 10;
+        stats.bombsFlicked++;
+
+        if (stats.bombsFlicked % 20 == 0 &&
+            stats.bonusLivesEarned < maxBonusLives) {
+          stats.bonusLivesEarned++;
+          stats.strikes = max(0, stats.strikes - 1);
+        }
+      } else {
+        stats.onStrike();
+      }
       return res;
     }
 
     if (res.grade == HitGrade.perfect) {
-      stats.onPerfect(coinMult: coinMult);
+      stats.onPerfect(coinMult: 1);
     } else {
-      stats.onGood(coinMult: coinMult);
+      stats.onGood(coinMult: 1);
     }
-    return res;
-  }
 
-  int backgroundTier() {
-    if (_t < 10) return 0;
-    if (_t < 25) return 1;
-    if (_t < 45) return 2;
-    if (_t < 70) return 3;
-    return 4;
+    return res;
   }
 }

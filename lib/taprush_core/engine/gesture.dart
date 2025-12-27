@@ -17,15 +17,11 @@ class GestureSample {
 
   double get dx => endX - startX;
   double get dy => endY - startY;
-
   double get distance => sqrt(dx * dx + dy * dy);
 
-  double get velocity => durationMs <= 0 ? 0 : distance / durationMs; // px/ms
+  bool get isTap => distance < 12;
 
-  /// LOCKED: forgiving flick so it works reliably.
-  /// If the user intentionally swipes, it should succeed.
   bool get isFlick =>
-      distance >= 28 &&      // was too high
-      durationMs <= 220 &&   // allow slightly longer
-      velocity >= 0.20;      // was too strict
+      distance >= 28 &&
+      durationMs <= 240;
 }

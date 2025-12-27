@@ -22,51 +22,52 @@ class InputResult {
 }
 
 class InputResolver {
-  InputResult resolveGesture({
+  InputResult resolve({
     required LaneGeometry g,
     required List<TapEntity> entities,
     required GestureSample gesture,
   }) {
     final lane = g.laneOfX(gesture.startX);
 
-    final candidates = <TapEntity>[];
+    TapEntity? target;
+    double bestDist = double.infinity;
+
     for (final e in entities) {
       if (e.lane != lane) continue;
-      if (e.containsTap(
+      if (!e.containsTap(
         g: g,
         tapX: gesture.startX,
         tapY: gesture.startY,
-      )) {
-        candidates.add(e);
+      )) continue;
+
+      final d = (e.centerY(g) - gesture.startY).abs();
+      if (d < bestDist) {
+        bestDist = d;
+        target = e;
       }
     }
 
-    if (candidates.isEmpty) return const InputResult.miss();
-
-    // closest center to finger start wins
-    candidates.sort((a, b) {
-      final da = (a.centerY(g) - gesture.startY).abs();
-      final db = (b.centerY(g) - gesture.startY).abs();
-      return da.compareTo(db);
-    });
-
-    final target = candidates.first;
+    if (target == null) return const InputResult.miss();
 
     // Bomb logic
     if (target.isBomb) {
-      if (gesture.isFlick) {
-        return const InputResult(hit: true, bomb: true, flicked: true, grade: null);
-      }
-      return const InputResult(hit: true, bomb: true, flicked: false, grade: null);
+      return InputResult(
+        hit: true,
+        bomb: true,
+        flicked: gesture.isFlick,
+        grade: null,
+      );
     }
 
-    // Tile logic: accuracy based on closeness to tile center
-    final dy = (target.centerY(g) - gesture.startY).abs();
-    final norm = dy / (g.tileHeight / 2); // 0=center, 1=edge
-
-    // LOCKED: forgiving perfect window
+    // Accuracy: forgiving inner window
+    final norm = bestDist / (g.tileHeight / 2);
     final grade = norm <= 0.55 ? HitGrade.perfect : HitGrade.good;
 
-    return InputResult(hit: true, bomb: false, flicked: false, grade: grade);
+    return InputResult(
+      hit: true,
+      bomb: false,
+      flicked: false,
+      grade: grade,
+    );
   }
 }
