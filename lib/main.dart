@@ -1,6 +1,18 @@
 import 'package:flutter/material.dart';
-import 'taprush_full/app/taprush_full_app.dart';
+import 'taprush_core/ui/taprush_screen.dart';
 
 void main() {
-  runApp(const TapRushFullApp());
+  runApp(const TapRushApp());
+}
+
+class TapRushApp extends StatelessWidget {
+  const TapRushApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: TapRushScreen(),
+    );
+  }
 }
