@@ -43,6 +43,7 @@ class InputResolver {
 
     if (candidates.isEmpty) return const InputResult.miss();
 
+    // closest center to finger start wins
     candidates.sort((a, b) {
       final da = (a.centerY(g) - gesture.startY).abs();
       final db = (b.centerY(g) - gesture.startY).abs();
@@ -54,31 +55,18 @@ class InputResolver {
     // Bomb logic
     if (target.isBomb) {
       if (gesture.isFlick) {
-        return const InputResult(
-          hit: true,
-          bomb: true,
-          flicked: true,
-          grade: null,
-        );
+        return const InputResult(hit: true, bomb: true, flicked: true, grade: null);
       }
-      return const InputResult(
-        hit: true,
-        bomb: true,
-        flicked: false,
-        grade: null,
-      );
+      return const InputResult(hit: true, bomb: true, flicked: false, grade: null);
     }
 
-    // Tile logic (tap only)
+    // Tile logic: accuracy based on closeness to tile center
     final dy = (target.centerY(g) - gesture.startY).abs();
-    final norm = dy / (g.tileHeight / 2);
-    final grade = norm <= 0.35 ? HitGrade.perfect : HitGrade.good;
+    final norm = dy / (g.tileHeight / 2); // 0=center, 1=edge
 
-    return InputResult(
-      hit: true,
-      bomb: false,
-      flicked: false,
-      grade: grade,
-    );
+    // LOCKED: forgiving perfect window
+    final grade = norm <= 0.55 ? HitGrade.perfect : HitGrade.good;
+
+    return InputResult(hit: true, bomb: false, flicked: false, grade: grade);
   }
 }

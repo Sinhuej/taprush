@@ -13,9 +13,9 @@ class EngineConfig {
 
   const EngineConfig({
     this.maxStrikes = 5,
-    this.baseSpeedPxPerSec = 260,
-    this.speedRampPerSec = 10,
-    this.spawnEverySec = 0.42,
+    this.baseSpeedPxPerSec = 240,
+    this.speedRampPerSec = 9,
+    this.spawnEverySec = 0.48,
     this.bombChanceBase = 0.06,
     this.bombChanceRampPerSec = 0.002,
   });
@@ -25,11 +25,9 @@ class TapRushEngine {
   final _rng = Random();
   final EngineConfig cfg;
 
-  TapRushEngine({EngineConfig? config})
-      : cfg = config ?? const EngineConfig();
+  TapRushEngine({EngineConfig? config}) : cfg = config ?? const EngineConfig();
 
   GameMode mode = GameMode.normal;
-
   LaneGeometry? _g;
 
   final RunStats stats = RunStats();
@@ -44,9 +42,7 @@ class TapRushEngine {
   bool get isGameOver => stats.strikes >= cfg.maxStrikes;
   int get coinMult => mode == GameMode.reverse ? 2 : 1;
 
-  void setGeometry(LaneGeometry g) {
-    _g = g;
-  }
+  void setGeometry(LaneGeometry g) => _g = g;
 
   void reset({required GameMode newMode}) {
     mode = newMode;
@@ -64,12 +60,11 @@ class TapRushEngine {
     _spawnTimerUp = 0.0;
   }
 
-  double _speed() =>
-      cfg.baseSpeedPxPerSec + (_t * cfg.speedRampPerSec);
+  double _speed() => cfg.baseSpeedPxPerSec + (_t * cfg.speedRampPerSec);
 
   double _bombChance() {
     final c = cfg.bombChanceBase + (_t * cfg.bombChanceRampPerSec);
-    return c.clamp(0.06, 0.40);
+    return c.clamp(0.06, 0.35);
   }
 
   void tick(double dt) {
@@ -84,10 +79,24 @@ class TapRushEngine {
     _spawnTimerDown += dt;
     _spawnTimerUp += dt;
 
-    final wantDown =
-        mode == GameMode.normal || mode == GameMode.epic;
-    final wantUp =
-        mode == GameMode.reverse || mode == GameMode.epic;
+    final wantDown = (mode == GameMode.normal) || (mode == GameMode.epic);
+    final wantUpBase = (mode == GameMode.reverse) || (mode == GameMode.epic);
+
+    // Epic staging
+    bool wantUp = wantUpBase;
+    double upSpawnEvery = cfg.spawnEverySec;
+
+    if (mode == GameMode.epic) {
+      if (_t < 8.0) {
+        wantUp = false;
+      } else if (_t < 20.0) {
+        wantUp = true;
+        upSpawnEvery = cfg.spawnEverySec * 2.0; // half rate
+      } else {
+        wantUp = true;
+        upSpawnEvery = cfg.spawnEverySec; // full
+      }
+    }
 
     if (wantDown) {
       while (_spawnTimerDown >= cfg.spawnEverySec) {
@@ -97,8 +106,8 @@ class TapRushEngine {
     }
 
     if (wantUp) {
-      while (_spawnTimerUp >= cfg.spawnEverySec) {
-        _spawnTimerUp -= cfg.spawnEverySec;
+      while (_spawnTimerUp >= upSpawnEvery) {
+        _spawnTimerUp -= upSpawnEvery;
         _spawnOne(g, FlowDir.up, bombChance);
       }
     }
@@ -111,6 +120,7 @@ class TapRushEngine {
       }
     }
 
+    // Misses cause strikes for tiles only
     entities.removeWhere((e) {
       final missed = e.isMissed(g);
       if (missed && !e.isBomb) {
@@ -120,19 +130,12 @@ class TapRushEngine {
     });
   }
 
-  void _spawnOne(
-    LaneGeometry g,
-    FlowDir dir,
-    double bombChance,
-  ) {
-    final canBomb = entities.isNotEmpty || _t > 4.0;
-    final isBomb =
-        canBomb && (_rng.nextDouble() < bombChance);
+  void _spawnOne(LaneGeometry g, FlowDir dir, double bombChance) {
+    final canBomb = entities.isNotEmpty || _t > 3.0;
+    final isBomb = canBomb && (_rng.nextDouble() < bombChance);
 
     final lane = _rng.nextInt(kLaneCount);
-    final startY = dir == FlowDir.down
-        ? -g.tileHeight
-        : g.height + g.tileHeight;
+    final startY = dir == FlowDir.down ? -g.tileHeight : g.height + g.tileHeight;
 
     entities.add(
       TapEntity(
@@ -145,55 +148,39 @@ class TapRushEngine {
     );
   }
 
-  /// MAIN INPUT ENTRY
   InputResult onGesture(GestureSample gesture) {
     final g = _g;
-    if (g == null || isGameOver) {
-      return const InputResult.miss();
-    }
+    if (g == null || isGameOver) return const InputResult.miss();
 
-    final res = input.resolveGesture(
-      g: g,
-      entities: entities,
-      gesture: gesture,
-    );
-
+    final res = input.resolveGesture(g: g, entities: entities, gesture: gesture);
     if (!res.hit) return res;
 
+    // Remove best match in that lane at start point
+    final lane = g.laneOfX(gesture.startX);
     TapEntity? target;
     for (final e in entities) {
-      if (e.containsTap(
-        g: g,
-        tapX: gesture.startX,
-        tapY: gesture.startY,
-      )) {
+      if (e.lane != lane) continue;
+      if (e.containsTap(g: g, tapX: gesture.startX, tapY: gesture.startY)) {
         target = e;
         break;
       }
     }
+    if (target != null) entities.remove(target);
 
-    if (target != null) {
-      entities.remove(target);
-    }
-
-    // Flicked bomb = safe removal
     if (res.bomb && res.flicked) {
+      // Safe removal
       return res;
     }
-
-    // Tapped bomb = strike
     if (res.bomb) {
       stats.onStrike();
       return res;
     }
 
-    // Tile scoring
     if (res.grade == HitGrade.perfect) {
       stats.onPerfect(coinMult: coinMult);
     } else {
       stats.onGood(coinMult: coinMult);
     }
-
     return res;
   }
 
