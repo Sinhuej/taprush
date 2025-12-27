@@ -23,17 +23,17 @@ class HumiliationEngine {
 
     switch (e) {
       case HumiliationEffect.hotDogFingers:
-        return const HumiliationLine(e, '🌭 Hot-dog fingers engaged.');
+        return HumiliationLine(e, '🌭 Hot-dog fingers engaged.');
       case HumiliationEffect.squeakyTaps:
-        return const HumiliationLine(e, '🧸 Squeaky taps enabled. You did this.');
+        return HumiliationLine(e, '🧸 Squeaky taps enabled. You did this.');
       case HumiliationEffect.upsideDownScore:
-        return const HumiliationLine(e, '🙃 Score feels… different now.');
+        return HumiliationLine(e, '🙃 Score feels… different now.');
       case HumiliationEffect.cheaterOverlay:
-        return const HumiliationLine(e, 'CHEATER MODE (UNRANKED)');
+        return HumiliationLine(e, 'CHEATER MODE (UNRANKED)');
       case HumiliationEffect.dadWatching:
-        return const HumiliationLine(e, 'Dad’s watching.');
+        return HumiliationLine(e, 'Dad’s watching.');
       case HumiliationEffect.questionableSkill:
-        return const HumiliationLine(e, 'Skill: Questionable.');
+        return HumiliationLine(e, 'Skill: Questionable.');
     }
   }
 }
