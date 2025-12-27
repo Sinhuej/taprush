@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'app/taprush_app.dart';
+import 'taprush_full/app/taprush_full_app.dart';
 
 void main() {
-  runApp(const TapRushApp());
+  runApp(const TapRushFullApp());
 }
