@@ -2,11 +2,9 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
         google()
-
-        // Primary
         mavenCentral()
 
-        // Fallbacks for blocked Maven Central
+        // Fallback mirrors for Maven Central 403s
         maven { url "https://repo1.maven.org/maven2" }
         maven { url "https://maven.aliyun.com/repository/public" }
         maven { url "https://jitpack.io" }
@@ -14,3 +12,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "android"
+include(":app")
