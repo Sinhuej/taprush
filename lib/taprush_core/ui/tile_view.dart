@@ -12,14 +12,16 @@ class TileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final baseColor = isBomb ? Colors.redAccent : Colors.black;
+
     return AnimatedScale(
       scale: isPressed ? 0.94 : 1.0,
-      duration: const Duration(milliseconds: 60),
+      duration: const Duration(milliseconds: 70),
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 6),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
-          color: isBomb ? Colors.redAccent : Colors.black,
+          color: baseColor,
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.25),
@@ -30,7 +32,8 @@ class TileView extends StatelessWidget {
         ),
         child: Center(
           child: isBomb
-              ? const Icon(Icons.warning, color: Colors.white)
+              ? const Icon(Icons.warning_amber_rounded,
+                  color: Colors.white, size: 28)
               : const SizedBox.shrink(),
         ),
       ),
