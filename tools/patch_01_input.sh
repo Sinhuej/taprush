@@ -1,3 +1,9 @@
+#!/usr/bin/env bash
+set -e
+
+echo "🔧 Patch 01 — Input resolver (single-hit, deterministic)"
+
+cat > lib/taprush_core/engine/input_resolver.dart <<'EOF'
 import 'models.dart';
 import 'gesture.dart';
 
@@ -83,3 +89,7 @@ class InputResolver {
     );
   }
 }
+EOF
+
+echo "✅ Patch 01 applied"
+

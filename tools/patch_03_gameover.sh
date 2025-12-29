@@ -1,3 +1,9 @@
+#!/usr/bin/env bash
+set -e
+
+echo "🟥 Patch 03 — Game over & retry flow"
+
+cat > lib/taprush_core/ui/play_screen.dart <<'EOF'
 import 'package:flutter/material.dart';
 import '../engine/game_engine.dart';
 import '../engine/models.dart';
@@ -100,3 +106,7 @@ class _PlayScreenState extends State<PlayScreen>
     );
   }
 }
+EOF
+
+echo "✅ Patch 03 applied"
+

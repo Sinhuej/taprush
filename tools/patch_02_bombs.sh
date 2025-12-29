@@ -1,3 +1,9 @@
+#!/usr/bin/env bash
+set -e
+
+echo "💣 Patch 02 — Bomb flick logic & rewards"
+
+cat > lib/taprush_core/engine/game_engine.dart <<'EOF'
 import 'dart:math';
 import 'models.dart';
 import 'gesture.dart';
@@ -130,3 +136,7 @@ class TapRushEngine {
     return 4;
   }
 }
+EOF
+
+echo "✅ Patch 02 applied"
+
