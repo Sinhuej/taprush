@@ -14,6 +14,9 @@ pluginManagement {
             }
         }
     }
+
+    // 🔑 This is the missing piece
+    includeBuild("../packages/flutter_tools/gradle")
 }
 
 dependencyResolutionManagement {
