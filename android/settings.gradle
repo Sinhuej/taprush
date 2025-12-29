@@ -2,15 +2,9 @@ pluginManagement {
     repositories {
         google()
         mavenCentral()
+        gradlePluginPortal()
         maven { url "https://repo1.maven.org/maven2" }
         maven { url "https://maven.aliyun.com/repository/public" }
-        gradlePluginPortal()
-    }
-
-    plugins {
-        id("org.jetbrains.kotlin.android") version "1.9.22"
-        id("com.android.application") version "7.3.0"
-        id("com.android.library") version "7.3.0"
     }
 }
 
