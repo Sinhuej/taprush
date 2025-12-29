@@ -12,45 +12,27 @@ class TileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final base = Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFF2A2A2A),
-            Color(0xFF0B0B0B),
+    return AnimatedScale(
+      scale: isPressed ? 0.94 : 1.0,
+      duration: const Duration(milliseconds: 60),
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 6),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          color: isBomb ? Colors.redAccent : Colors.black,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.25),
+              blurRadius: 6,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
-        boxShadow: const [
-          BoxShadow(
-            blurRadius: 14,
-            offset: Offset(0, 6),
-            color: Color(0x33000000),
-          )
-        ],
-        border: isBomb
-            ? Border.all(color: const Color(0xFFFF4D4D), width: 3)
-            : null,
-      ),
-      child: isBomb
-          ? const Center(
-              child: Text(
-                "💣",
-                style: TextStyle(fontSize: 22),
-              ),
-            )
-          : null,
-    );
-
-    return AnimatedScale(
-      scale: isPressed ? 0.96 : 1.0,
-      duration: const Duration(milliseconds: 70),
-      child: AnimatedOpacity(
-        opacity: isPressed ? 0.86 : 1.0,
-        duration: const Duration(milliseconds: 70),
-        child: base,
+        child: Center(
+          child: isBomb
+              ? const Icon(Icons.warning, color: Colors.white)
+              : const SizedBox.shrink(),
+        ),
       ),
     );
   }
