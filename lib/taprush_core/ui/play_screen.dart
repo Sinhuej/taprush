@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math';
-import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
 
@@ -24,9 +23,9 @@ class _PlayScreenState extends State<PlayScreen> {
   Timer? _timer;
   DateTime _lastFrame = DateTime.now();
 
-  Offset? _downPos;
-  Offset? _lastPos;
-  DateTime? _downTime;
+  Offset? _startPos;
+  Offset? _endPos;
+  DateTime? _startTime;
 
   int _prevStrikes = 0;
 
@@ -56,16 +55,26 @@ class _PlayScreenState extends State<PlayScreen> {
     super.dispose();
   }
 
-  void _submitGesture(Offset start, Offset end, int durationMs) {
+  void _submitGesture() {
+    if (_startPos == null || _startTime == null) return;
+
+    final end = _endPos ?? _startPos!;
+    final durationMs =
+        DateTime.now().difference(_startTime!).inMilliseconds.clamp(1, 1000);
+
     engine.onGesture(
       GestureSample(
-        startX: start.dx,
-        startY: start.dy,
+        startX: _startPos!.dx,
+        startY: _startPos!.dy,
         endX: end.dx,
         endY: end.dy,
         durationMs: durationMs,
       ),
     );
+
+    _startPos = null;
+    _endPos = null;
+    _startTime = null;
   }
 
   Color _bgColor(int tier) {
@@ -86,26 +95,18 @@ class _PlayScreenState extends State<PlayScreen> {
       body: Listener(
         behavior: HitTestBehavior.opaque,
         onPointerDown: (e) {
-          _downPos = e.localPosition;
-          _lastPos = e.localPosition;
-          _downTime = DateTime.now();
+          _startPos = e.localPosition;
+          _endPos = e.localPosition;
+          _startTime = DateTime.now();
         },
         onPointerMove: (e) {
-          _lastPos = e.localPosition;
+          _endPos = e.localPosition;
         },
-        onPointerUp: (e) {
-          if (_downPos == null || _downTime == null) return;
-          final dur =
-              DateTime.now().difference(_downTime!).inMilliseconds.clamp(1, 1000);
-          _submitGesture(_downPos!, _lastPos ?? _downPos!, dur);
-          _downPos = null;
-          _downTime = null;
-        },
+        onPointerUp: (_) => _submitGesture(),
         child: Container(
           color: _bgColor(engine.backgroundTier()),
           child: Stack(
             children: [
-              // 🎮 RENDER TILES
               for (final e in engine.entities)
                 Positioned(
                   left: geom.laneLeft(e.lane),
@@ -117,15 +118,12 @@ class _PlayScreenState extends State<PlayScreen> {
                   child: Container(
                     margin: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: e.isBomb
-                          ? Colors.redAccent
-                          : Colors.black,
+                      color: e.isBomb ? Colors.redAccent : Colors.black,
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
                 ),
 
-              // HUD
               Positioned(
                 top: 40,
                 left: 20,
