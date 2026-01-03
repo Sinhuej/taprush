@@ -29,11 +29,11 @@ class _PlayScreenState extends State<PlayScreen> {
   DateTime? _downTime;
 
   int _prevStrikes = 0;
+  bool _initialized = false;
 
   @override
   void initState() {
     super.initState();
-    engine.reset(newMode: widget.mode);
 
     _timer = Timer.periodic(const Duration(milliseconds: 16), (_) {
       final now = DateTime.now();
@@ -83,7 +83,13 @@ class _PlayScreenState extends State<PlayScreen> {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final geom = LaneGeometry.fromSize(size.width, size.height);
+
     engine.setGeometry(geom);
+
+    if (!_initialized) {
+      engine.reset(newMode: widget.mode);
+      _initialized = true;
+    }
 
     return Scaffold(
       body: Listener(
@@ -98,15 +104,49 @@ class _PlayScreenState extends State<PlayScreen> {
         },
         onPointerUp: (e) {
           if (_downPos == null || _downTime == null) return;
-          final dur = DateTime.now()
-              .difference(_downTime!)
-              .inMilliseconds
-              .clamp(1, 1000);
+          final dur =
+              DateTime.now().difference(_downTime!).inMilliseconds.clamp(1, 1000);
           _submitGesture(_downPos!, _lastPos ?? _downPos!, dur);
           _downPos = null;
           _downTime = null;
         },
-        child: Container(),
+        child: Container(
+          color: _bgColor(engine.backgroundTier()),
+          child: Stack(
+            children: [
+              // 🎮 RENDER TILES
+              for (final e in engine.entities)
+                Positioned(
+                  left: geom.laneLeft(e.lane),
+                  top: e.dir == FlowDir.down
+                      ? e.y
+                      : e.y - geom.tileHeight,
+                  width: geom.laneWidth,
+                  height: geom.tileHeight,
+                  child: Container(
+                    margin: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: e.isBomb ? Colors.redAccent : Colors.black,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+
+              // HUD
+              Positioned(
+                top: 40,
+                left: 20,
+                child: Text(
+                  'Score ${engine.stats.score}  Lives ${5 - engine.stats.strikes}',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
