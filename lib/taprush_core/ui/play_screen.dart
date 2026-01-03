@@ -28,7 +28,6 @@ class _PlayScreenState extends State<PlayScreen> {
   Offset? _lastPos;
   DateTime? _downTime;
 
-  int _prevStrikes = 0;
   bool _initialized = false;
 
   @override
@@ -36,15 +35,17 @@ class _PlayScreenState extends State<PlayScreen> {
     super.initState();
 
     _timer = Timer.periodic(const Duration(milliseconds: 16), (_) {
+      // 🛑 Hard stop on game over
+      if (engine.stats.strikes >= 5) {
+        _timer?.cancel();
+        return;
+      }
+
       final now = DateTime.now();
       final dt = now.difference(_lastFrame).inMilliseconds / 1000.0;
       _lastFrame = now;
 
       engine.tick(dt);
-
-      if (engine.stats.strikes > _prevStrikes) {
-        _prevStrikes = engine.stats.strikes;
-      }
 
       if (mounted) setState(() {});
     });
