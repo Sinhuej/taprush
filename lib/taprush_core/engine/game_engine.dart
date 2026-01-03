@@ -1,153 +1,43 @@
-import 'dart:math';
-import 'models.dart';
-import 'gesture.dart';
-import 'input_resolver.dart';
+InputResult onGesture(GestureSample gesture) {
+  final g = _g;
+  if (g == null || isGameOver) return const InputResult.miss();
 
-class TapRushEngine {
-  final _rng = Random();
-  final RunStats stats = RunStats();
-  final InputResolver input = InputResolver();
+  final res = input.resolve(
+    g: g,
+    entities: entities,
+    gesture: gesture,
+  );
 
-  LaneGeometry? _g;
-  GameMode mode = GameMode.normal;
+  if (!res.hit || res.entity == null) return res;
 
-  final List<TapEntity> entities = [];
+  final target = res.entity!;
+  if (target.consumed) return const InputResult.miss();
 
-  Set<int> _epicDown = {};
-  Set<int> _epicUp = {};
+  target.consumed = true;
+  entities.remove(target);
 
-  double _time = 0;
-  double _spawnTimer = 0;
-  int _id = 0;
+  if (target.isBomb) {
+    if (res.flicked) {
+      stats.coins += 10;
+      stats.bombsFlicked++;
 
-  static const int maxStrikes = 5;
-  static const int maxBonusLives = 3;
-
-  void setGeometry(LaneGeometry g) => _g = g;
-
-  void reset({required GameMode newMode}) {
-    mode = newMode;
-    entities.clear();
-    _time = 0;
-    _spawnTimer = 0;
-    _id = 0;
-
-    stats
-      ..score = 0
-      ..coins = 0
-      ..strikes = 0
-      ..totalHits = 0
-      ..perfectHits = 0
-      ..bombsFlicked = 0
-      ..bonusLivesEarned = 0;
-
-    if (mode == GameMode.epic) {
-      final lanes = List.generate(kLaneCount, (i) => i)..shuffle(_rng);
-      _epicDown = lanes.take(3).toSet();
-      _epicUp = lanes.skip(3).toSet();
-    }
-  }
-
-  bool get isGameOver => stats.strikes >= maxStrikes;
-
-  void tick(double dt) {
-    final g = _g;
-    if (g == null || isGameOver) return;
-
-    _time += dt;
-    _spawnTimer += dt;
-
-    final speed = 240 + _time * 8;
-
-    if (_spawnTimer >= 0.45) {
-      _spawnTimer = 0;
-      _spawn(g);
-    }
-
-    for (final e in entities) {
-      e.y += e.dir == FlowDir.down ? speed * dt : -speed * dt;
-    }
-
-    entities.removeWhere((e) {
-      if (!e.isMissed(g)) return false;
-      if (!e.isBomb) stats.onStrike();
-      return true;
-    });
-  }
-
-  void _spawn(LaneGeometry g) {
-    if (mode == GameMode.epic) {
-      for (final l in _epicDown) _trySpawn(g, l, FlowDir.down);
-      for (final l in _epicUp) _trySpawn(g, l, FlowDir.up);
-    } else {
-      final dir = mode == GameMode.reverse ? FlowDir.up : FlowDir.down;
-      _trySpawn(g, _rng.nextInt(kLaneCount), dir);
-    }
-  }
-
-  void _trySpawn(LaneGeometry g, int lane, FlowDir dir) {
-    final count =
-        entities.where((e) => e.lane == lane && e.dir == dir).length;
-    if (count >= 2) return;
-
-    final isBomb = _rng.nextDouble() < 0.08;
-    final y = dir == FlowDir.down ? -g.tileHeight : g.height + g.tileHeight;
-
-    entities.add(
-      TapEntity(
-        id: 'e_${_id++}',
-        lane: lane,
-        dir: dir,
-        isBomb: isBomb,
-        y: y,
-      ),
-    );
-  }
-
-  InputResult onGesture(GestureSample gesture) {
-    final g = _g;
-    if (g == null || isGameOver) return const InputResult.miss();
-
-    final res = input.resolve(g: g, entities: entities, gesture: gesture);
-    final target = res.entity;
-
-    if (!res.hit || target == null || target.consumed) {
-      return res;
-    }
-
-    // 🔒 HARD LOCK
-    target.consumed = true;
-    entities.remove(target);
-
-    if (target.isBomb) {
-      if (res.flicked) {
-        stats.coins += 10;
-        stats.bombsFlicked++;
-        if (stats.bombsFlicked % 20 == 0 &&
-            stats.bonusLivesEarned < maxBonusLives) {
-          stats.bonusLivesEarned++;
-          stats.strikes = max(0, stats.strikes - 1);
-        }
-      } else {
-        stats.onStrike();
+      if (stats.bombsFlicked % 20 == 0 &&
+          stats.bonusLivesEarned < maxBonusLives) {
+        stats.bonusLivesEarned++;
+        stats.strikes = max(0, stats.strikes - 1);
       }
-      return res;
-    }
-
-    if (res.grade == HitGrade.perfect) {
-      stats.onPerfect(coinMult: 1);
     } else {
-      stats.onGood(coinMult: 1);
+      stats.onStrike();
     }
-
     return res;
   }
 
-  int backgroundTier() {
-    if (_time < 10) return 0;
-    if (_time < 25) return 1;
-    if (_time < 45) return 2;
-    if (_time < 70) return 3;
-    return 4;
+  if (res.grade == HitGrade.perfect) {
+    stats.onPerfect(coinMult: 1);
+  } else {
+    stats.onGood(coinMult: 1);
   }
+
+  return res;
 }
+

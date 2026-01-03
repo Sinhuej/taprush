@@ -19,55 +19,37 @@ class GestureSample {
     required this.endTime,
   });
 
-  /// Total gesture duration in milliseconds
   double get durationMs =>
       (endTime - startTime).inMicroseconds / 1000.0;
 
-  /// Delta vector
   Offset get delta => end - start;
 
-  /// Squared distance (cheap, deterministic)
   double get distanceSquared =>
       delta.dx * delta.dx + delta.dy * delta.dy;
 
-  /// Distance in pixels
   double get distance => delta.distance;
 
-  /// Velocity in px/ms
   double get velocity =>
       durationMs <= 0 ? 0 : distance / durationMs;
 
-  /// Primary axis movement (prevents jitter flicks)
-  double get primaryAxisMagnitude =>
-      delta.dx.abs() > delta.dy.abs()
-          ? delta.dx.abs()
-          : delta.dy.abs();
-
   GestureType classify() {
-    // ---- Tunable thresholds (TapRush feel) ----
+    // ---- GAME FEEL TUNING ----
+    const double kTapMaxDurationMs = 200;
+    const double kTapDistanceSq = 400; // 20px drift
 
-    // Flick tuning
-    const double kFlickDistanceSq = 900;      // 30px^2
-    const double kFlickVelocityMin = 0.7;     // px/ms
-    const double kFlickMinDurationMs = 25;    // prevent spikes
-    const double kFlickPrimaryAxisMin = 22;   // directional intent
+    const double kFlickDistanceSq = 625; // 25px
+    const double kFlickVelocityMin = 0.4;
 
-    // Tap tuning
-    const double kTapMaxDurationMs = 160;
-    const double kTapMaxDistanceSq = 400;     // 20px^2
-
-    // ---- Flick: fast, far, intentional ----
-    if (durationMs >= kFlickMinDurationMs &&
-        distanceSquared >= kFlickDistanceSq &&
-        velocity >= kFlickVelocityMin &&
-        primaryAxisMagnitude >= kFlickPrimaryAxisMin) {
-      return GestureType.flick;
+    // TAP: short + contained
+    if (durationMs <= kTapMaxDurationMs &&
+        distanceSquared <= kTapDistanceSq) {
+      return GestureType.tap;
     }
 
-    // ---- Tap: quick and still ----
-    if (durationMs <= kTapMaxDurationMs &&
-        distanceSquared <= kTapMaxDistanceSq) {
-      return GestureType.tap;
+    // FLICK: intentional + fast
+    if (distanceSquared >= kFlickDistanceSq &&
+        velocity >= kFlickVelocityMin) {
+      return GestureType.flick;
     }
 
     return GestureType.ignore;
@@ -76,9 +58,9 @@ class GestureSample {
   @override
   String toString() {
     return 'GestureSample('
-        'durationMs=${durationMs.toStringAsFixed(1)}, '
-        'distance=${distance.toStringAsFixed(1)}, '
-        'velocity=${velocity.toStringAsFixed(2)}, '
+        'duration=${durationMs.toStringAsFixed(1)}ms, '
+        'dist=${distance.toStringAsFixed(1)}, '
+        'vel=${velocity.toStringAsFixed(2)}, '
         'type=${classify()}'
         ')';
   }

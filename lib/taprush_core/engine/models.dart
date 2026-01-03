@@ -1,34 +1,39 @@
 import 'dart:math';
 
-const int kLaneCount = 4;
+const int kLaneCount = 6;
 
 enum FlowDir { down, up }
 
-enum HitGrade { perfect, good }
+enum GameMode { normal, reverse, epic }
 
-class RunStats {
-  int score = 0;
-  int coins = 0;
-  int strikes = 0;
-  int totalHits = 0;
-  int perfectHits = 0;
-  int bombsFlicked = 0;
-  int bonusLivesEarned = 0;
+enum HitGrade { perfect, good, miss }
 
-  void onStrike() => strikes++;
+class LaneGeometry {
+  final double width;
+  final double height;
+  final double laneWidth;
+  final double tileHeight;
 
-  void onPerfect({required int coinMult}) {
-    score += 2;
-    coins += 2 * coinMult;
-    totalHits++;
-    perfectHits++;
+  LaneGeometry({
+    required this.width,
+    required this.height,
+    required this.laneWidth,
+    required this.tileHeight,
+  });
+
+  static LaneGeometry fromSize(double w, double h) {
+    return LaneGeometry(
+      width: w,
+      height: h,
+      laneWidth: w / kLaneCount,
+      tileHeight: 80,
+    );
   }
 
-  void onGood({required int coinMult}) {
-    score += 1;
-    coins += 1 * coinMult;
-    totalHits++;
-  }
+  double laneLeft(int lane) => lane * laneWidth;
+
+  double centerY(TapEntity e) =>
+      e.dir == FlowDir.down ? e.y + tileHeight / 2 : e.y - tileHeight / 2;
 }
 
 class TapEntity {
@@ -38,7 +43,7 @@ class TapEntity {
   final bool isBomb;
 
   double y;
-  bool consumed = false; // 🔒 HARD GUARD
+  bool consumed = false;
 
   TapEntity({
     required this.id,
@@ -49,36 +54,50 @@ class TapEntity {
   });
 
   bool isMissed(LaneGeometry g) {
-    return dir == FlowDir.down ? y > g.height : y < -g.tileHeight;
+    if (dir == FlowDir.down) {
+      return y > g.height;
+    } else {
+      return y + g.tileHeight < 0;
+    }
   }
 
-  double centerY(LaneGeometry g) {
-    return dir == FlowDir.down
-        ? y + g.tileHeight / 2
-        : y - g.tileHeight / 2;
+  bool containsTap(LaneGeometry g, double x, double yTap) {
+    if (consumed) return false;
+
+    final left = g.laneLeft(lane);
+    final right = left + g.laneWidth;
+
+    final top = dir == FlowDir.down ? y : y - g.tileHeight;
+    final bottom = top + g.tileHeight;
+
+    return x >= left && x <= right && yTap >= top && yTap <= bottom;
   }
 }
 
-class LaneGeometry {
-  final double width;
-  final double height;
-  final double laneWidth;
-  final double tileHeight;
+class RunStats {
+  int score = 0;
+  int coins = 0;
+  int strikes = 0;
+  int totalHits = 0;
+  int perfectHits = 0;
+  int bombsFlicked = 0;
+  int bonusLivesEarned = 0;
 
-  LaneGeometry._(
-    this.width,
-    this.height,
-    this.laneWidth,
-    this.tileHeight,
-  );
-
-  static LaneGeometry fromSize(double w, double h) {
-    final laneWidth = w / kLaneCount;
-    return LaneGeometry._(w, h, laneWidth, 64);
+  void onPerfect({int coinMult = 1}) {
+    score += 2 * coinMult;
+    coins += 1 * coinMult;
+    totalHits++;
+    perfectHits++;
   }
 
-  double laneLeft(int lane) => lane * laneWidth;
+  void onGood({int coinMult = 1}) {
+    score += 1 * coinMult;
+    coins += 1 * coinMult;
+    totalHits++;
+  }
 
-  int laneOfX(double x) =>
-      max(0, min(kLaneCount - 1, (x / laneWidth).floor()));
+  void onStrike() {
+    strikes++;
+  }
 }
+

@@ -115,55 +115,52 @@ class _TapRushScreenState extends State<TapRushScreen> {
     _lastPanPos = d.localPosition;
   }
 
-  void _handlePanEnd(DragEndDetails d) {
-    if (_gestureStart == null || _gestureStartTime == null) return;
-
-    final durationMs =
-        DateTime.now().difference(_gestureStartTime!).inMilliseconds;
-
-    final gsample = GestureSample(
-      start: Offset( _gestureStart!.dx,
-      , _gestureStart!.dy,
-      final now =
-          Duration(milliseconds: DateTime.now().millisecondsSinceEpoch);
-      final startTime =
-          now - Duration(milliseconds: panDurationMs.clamp(1, 1000));
-
-      final sample = GestureSample(
-        start: _gestureStart!,
-        end: _lastPanPos,
-        startTime: startTime,
-        endTime: now,
-      );
-
-      final dir = sample.end - sample.start;
-
-      _engine.onGesture(sample);
-
-    // FX: flick bomb throw
-    if (res.hit && res.bomb && res.flicked) {
-      final dir = Offset(gsample.endX - gsample.startX, gsample.endY - gsample.startY);
-      final n = _norm(dir);
-      final throwDist = 160.0;
-      final end = _gestureStart! + n * throwDist;
-      _flickFx = FlickFx(start: _gestureStart!, end: end);
-    }
-
-    // FX: perfect ring ping
-    if (res.hit && !res.bomb && res.grade == HitGrade.perfect) {
-      _perfectRingPos = _gestureStart;
-      _perfectRingAt = DateTime.now();
-    }
-
-    // Game over line on transition to game over
-    if (engine.isGameOver) {
-      _onGameOver();
-    }
-
-    _gestureStart = null;
-    _gestureStartTime = null;
-
-    setState(() {});
+  void _handlePanEnd(DragEndDetails d) {\
+    if (_gestureStart == null || _gestureStartTime == null) return;\
+\
+    final now = DateTime.now();\
+    final durationMs =\
+        now.difference(_gestureStartTime!).inMilliseconds.clamp(1, 1000);\
+\
+    final endTime =\
+        Duration(milliseconds: now.millisecondsSinceEpoch);\
+    final startTime =\
+        endTime - Duration(milliseconds: durationMs);\
+\
+    final sample = GestureSample(\
+      start: _gestureStart!,\
+      end: _lastPanPos ?? _gestureStart!,\
+      startTime: startTime,\
+      endTime: endTime,\
+    );\
+\
+    final res = _engine.onGesture(sample);\
+\
+    // FX: bomb flick throw\
+    if (res.hit && res.bomb && res.flicked) {\
+      final dir = sample.end - sample.start;\
+      final n = _norm(dir);\
+      const throwDist = 160.0;\
+      final end = _gestureStart! + n * throwDist;\
+      _flickFx = FlickFx(start: _gestureStart!, end: end);\
+    }\
+\
+    // FX: perfect ring\
+    if (res.hit && !res.bomb && res.grade == HitGrade.perfect) {\
+      _perfectRingPos = _gestureStart;\
+      _perfectRingAt = DateTime.now();\
+    }\
+\
+    // Game over line (single transition)\
+    if (_engine.isGameOver) {\
+      _onGameOver();\
+    }\
+\
+    _gestureStart = null;\
+    _gestureStartTime = null;\
+    _lastPanPos = null;\
+\
+    setState(() {});\
   }
 
   Offset _norm(Offset v) {
