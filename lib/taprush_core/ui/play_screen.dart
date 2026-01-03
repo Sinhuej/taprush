@@ -34,12 +34,14 @@ class _PlayScreenState extends State<PlayScreen> {
   void initState() {
     super.initState();
 
+    engine.reset(newMode: widget.mode);
+    _initialized = true;
+
+    _lastFrame = DateTime.now();
+
     _timer = Timer.periodic(const Duration(milliseconds: 16), (_) {
-      // 🛑 Hard stop on game over
-      if (engine.stats.strikes >= 5) {
-        _timer?.cancel();
-        return;
-      }
+      // HARD STOP ON GAME OVER
+      if (engine.stats.strikes >= 5) return;
 
       final now = DateTime.now();
       final dt = now.difference(_lastFrame).inMilliseconds / 1000.0;
@@ -47,7 +49,9 @@ class _PlayScreenState extends State<PlayScreen> {
 
       engine.tick(dt);
 
-      if (mounted) setState(() {});
+      if (mounted) {
+        setState(() {});
+      }
     });
   }
 
@@ -84,13 +88,7 @@ class _PlayScreenState extends State<PlayScreen> {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final geom = LaneGeometry.fromSize(size.width, size.height);
-
     engine.setGeometry(geom);
-
-    if (!_initialized) {
-      engine.reset(newMode: widget.mode);
-      _initialized = true;
-    }
 
     return Scaffold(
       body: Listener(
@@ -115,7 +113,6 @@ class _PlayScreenState extends State<PlayScreen> {
           color: _bgColor(engine.backgroundTier()),
           child: Stack(
             children: [
-              // 🎮 RENDER TILES
               for (final e in engine.entities)
                 Positioned(
                   left: geom.laneLeft(e.lane),
@@ -132,8 +129,6 @@ class _PlayScreenState extends State<PlayScreen> {
                     ),
                   ),
                 ),
-
-              // HUD
               Positioned(
                 top: 40,
                 left: 20,
