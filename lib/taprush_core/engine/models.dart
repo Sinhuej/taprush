@@ -3,9 +3,7 @@ import 'dart:math';
 const int kLaneCount = 6;
 
 enum FlowDir { down, up }
-
 enum GameMode { normal, reverse, epic }
-
 enum HitGrade { perfect, good, miss }
 
 class LaneGeometry {
@@ -32,8 +30,16 @@ class LaneGeometry {
 
   double laneLeft(int lane) => lane * laneWidth;
 
-  double centerY(TapEntity e) =>
-      e.dir == FlowDir.down ? e.y + tileHeight / 2 : e.y - tileHeight / 2;
+  int laneOfX(double x) {
+    final lane = (x / laneWidth).floor();
+    return lane.clamp(0, kLaneCount - 1);
+  }
+
+  double centerY(TapEntity e) {
+    return e.dir == FlowDir.down
+        ? e.y + tileHeight / 2
+        : e.y - tileHeight / 2;
+  }
 }
 
 class TapEntity {
@@ -41,7 +47,6 @@ class TapEntity {
   final int lane;
   final FlowDir dir;
   final bool isBomb;
-
   double y;
   bool consumed = false;
 
@@ -54,11 +59,9 @@ class TapEntity {
   });
 
   bool isMissed(LaneGeometry g) {
-    if (dir == FlowDir.down) {
-      return y > g.height;
-    } else {
-      return y + g.tileHeight < 0;
-    }
+    return dir == FlowDir.down
+        ? y > g.height
+        : y + g.tileHeight < 0;
   }
 
   bool containsTap(LaneGeometry g, double x, double yTap) {
@@ -100,4 +103,3 @@ class RunStats {
     strikes++;
   }
 }
-

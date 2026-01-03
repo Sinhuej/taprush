@@ -5,7 +5,7 @@ class InputResult {
   final bool hit;
   final bool bomb;
   final bool flicked;
-  final HitGrade? grade;
+  final HitGrade grade;
   final TapEntity? entity;
 
   const InputResult({
@@ -20,14 +20,11 @@ class InputResult {
       : hit = false,
         bomb = false,
         flicked = false,
-        grade = null,
+        grade = HitGrade.miss,
         entity = null;
 }
 
 class InputResolver {
-  static const double _flickDistSq = 28 * 28;
-  static const int _maxFlickMs = 300;
-
   InputResult resolve({
     required LaneGeometry g,
     required List<TapEntity> entities,
@@ -35,36 +32,25 @@ class InputResolver {
   }) {
     final lane = g.laneOfX(gesture.start.dx);
 
-    TapEntity? best;
-    double bestDist = double.infinity;
-
     for (final e in entities) {
       if (e.lane != lane) continue;
-      if (!e.containsTap(
-        g: g,
-        tapX: gesture.start.dx,
-        tapY: gesture.start.dy,
-      )) continue;
 
-      final d = (e.centerY(g) - gesture.start.dy).abs();
-      if (d < bestDist) {
-        bestDist = d;
-        best = e;
+      if (!e.containsTap(g, gesture.start.dx, gesture.start.dy)) {
+        continue;
       }
+
+      final dy = (g.centerY(e) - gesture.start.dy).abs();
+      final flicked = gesture.classify() == GestureType.flick;
+
+      return InputResult(
+        hit: true,
+        bomb: e.isBomb,
+        flicked: flicked,
+        grade: dy < 20 ? HitGrade.perfect : HitGrade.good,
+        entity: e,
+      );
     }
 
-    if (best == null) return const InputResult.miss();
-
-    final isFlick =
-        gesture.distanceSquared >= _flickDistSq &&
-        gesture.durationMs <= _maxFlickMs;
-
-    return InputResult(
-      hit: true,
-      bomb: best.isBomb,
-      flicked: best.isBomb && isFlick,
-      grade: best.isBomb ? null : HitGrade.perfect,
-      entity: best,
-    );
+    return const InputResult.miss();
   }
 }
