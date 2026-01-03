@@ -33,7 +33,7 @@ class InputResolver {
     required List<TapEntity> entities,
     required GestureSample gesture,
   }) {
-    final lane = g.laneOfX(gesture.startX);
+    final lane = g.laneOfX(gesture.start.dx);
 
     TapEntity? best;
     double bestDist = double.infinity;
@@ -42,11 +42,11 @@ class InputResolver {
       if (e.lane != lane) continue;
       if (!e.containsTap(
         g: g,
-        tapX: gesture.startX,
-        tapY: gesture.startY,
+        tapX: gesture.start.dx,
+        tapY: gesture.start.dy,
       )) continue;
 
-      final d = (e.centerY(g) - gesture.startY).abs();
+      final d = (e.centerY(g) - gesture.start.dy).abs();
       if (d < bestDist) {
         bestDist = d;
         best = e;

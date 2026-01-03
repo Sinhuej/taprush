@@ -122,14 +122,23 @@ class _TapRushScreenState extends State<TapRushScreen> {
         DateTime.now().difference(_gestureStartTime!).inMilliseconds;
 
     final gsample = GestureSample(
-      startX: _gestureStart!.dx,
-      startY: _gestureStart!.dy,
-      endX: _lastPanPos.dx,
-      endY: _lastPanPos.dy,
-      durationMs: durationMs,
-    );
+      start: Offset( _gestureStart!.dx,
+      , _gestureStart!.dy,
+      final now =
+          Duration(milliseconds: DateTime.now().millisecondsSinceEpoch);
+      final startTime =
+          now - Duration(milliseconds: panDurationMs.clamp(1, 1000));
 
-    final res = engine.onGesture(gsample);
+      final sample = GestureSample(
+        start: _gestureStart!,
+        end: _lastPanPos,
+        startTime: startTime,
+        endTime: now,
+      );
+
+      final dir = sample.end - sample.start;
+
+      _engine.onGesture(sample);
 
     // FX: flick bomb throw
     if (res.hit && res.bomb && res.flicked) {

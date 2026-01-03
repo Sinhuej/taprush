@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
 
@@ -23,9 +24,9 @@ class _PlayScreenState extends State<PlayScreen> {
   Timer? _timer;
   DateTime _lastFrame = DateTime.now();
 
-  Offset? _startPos;
-  Offset? _endPos;
-  DateTime? _startTime;
+  Offset? _downPos;
+  Offset? _lastPos;
+  DateTime? _downTime;
 
   int _prevStrikes = 0;
 
@@ -55,26 +56,19 @@ class _PlayScreenState extends State<PlayScreen> {
     super.dispose();
   }
 
-  void _submitGesture() {
-    if (_startPos == null || _startTime == null) return;
-
-    final end = _endPos ?? _startPos!;
-    final durationMs =
-        DateTime.now().difference(_startTime!).inMilliseconds.clamp(1, 1000);
+  void _submitGesture(Offset start, Offset end, int durationMs) {
+    final endTime =
+        Duration(milliseconds: DateTime.now().millisecondsSinceEpoch);
+    final startTime = endTime - Duration(milliseconds: durationMs);
 
     engine.onGesture(
       GestureSample(
-        startX: _startPos!.dx,
-        startY: _startPos!.dy,
-        endX: end.dx,
-        endY: end.dy,
-        durationMs: durationMs,
+        start: start,
+        end: end,
+        startTime: startTime,
+        endTime: endTime,
       ),
     );
-
-    _startPos = null;
-    _endPos = null;
-    _startTime = null;
   }
 
   Color _bgColor(int tier) {
@@ -95,49 +89,24 @@ class _PlayScreenState extends State<PlayScreen> {
       body: Listener(
         behavior: HitTestBehavior.opaque,
         onPointerDown: (e) {
-          _startPos = e.localPosition;
-          _endPos = e.localPosition;
-          _startTime = DateTime.now();
+          _downPos = e.localPosition;
+          _lastPos = e.localPosition;
+          _downTime = DateTime.now();
         },
         onPointerMove: (e) {
-          _endPos = e.localPosition;
+          _lastPos = e.localPosition;
         },
-        onPointerUp: (_) => _submitGesture(),
-        child: Container(
-          color: _bgColor(engine.backgroundTier()),
-          child: Stack(
-            children: [
-              for (final e in engine.entities)
-                Positioned(
-                  left: geom.laneLeft(e.lane),
-                  top: e.dir == FlowDir.down
-                      ? e.y
-                      : e.y - geom.tileHeight,
-                  width: geom.laneWidth,
-                  height: geom.tileHeight,
-                  child: Container(
-                    margin: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: e.isBomb ? Colors.redAccent : Colors.black,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-
-              Positioned(
-                top: 40,
-                left: 20,
-                child: Text(
-                  'Score ${engine.stats.score}  Lives ${5 - engine.stats.strikes}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+        onPointerUp: (e) {
+          if (_downPos == null || _downTime == null) return;
+          final dur = DateTime.now()
+              .difference(_downTime!)
+              .inMilliseconds
+              .clamp(1, 1000);
+          _submitGesture(_downPos!, _lastPos ?? _downPos!, dur);
+          _downPos = null;
+          _downTime = null;
+        },
+        child: Container(),
       ),
     );
   }
