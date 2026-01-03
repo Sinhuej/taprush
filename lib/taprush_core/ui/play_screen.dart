@@ -1,13 +1,9 @@
 import 'dart:async';
-import 'dart:math';
-import 'dart:ui' show lerpDouble;
-
 import 'package:flutter/material.dart';
 
 import '../engine/models.dart';
 import '../engine/game_engine.dart';
 import '../engine/gesture.dart';
-import '../fun/humiliation.dart';
 
 class PlayScreen extends StatefulWidget {
   final GameMode mode;
@@ -19,7 +15,6 @@ class PlayScreen extends StatefulWidget {
 
 class _PlayScreenState extends State<PlayScreen> {
   final TapRushEngine engine = TapRushEngine();
-  final HumiliationEngine hum = HumiliationEngine();
 
   Timer? _timer;
   DateTime _lastFrame = DateTime.now();
@@ -28,20 +23,16 @@ class _PlayScreenState extends State<PlayScreen> {
   Offset? _lastPos;
   DateTime? _downTime;
 
-  bool _initialized = false;
-
   @override
   void initState() {
     super.initState();
-
     engine.reset(newMode: widget.mode);
-    _initialized = true;
-
-    _lastFrame = DateTime.now();
 
     _timer = Timer.periodic(const Duration(milliseconds: 16), (_) {
-      // HARD STOP ON GAME OVER
-      if (engine.stats.strikes >= 5) return;
+      if (engine.stats.strikes >= 5) {
+        _timer?.cancel();
+        return;
+      }
 
       final now = DateTime.now();
       final dt = now.difference(_lastFrame).inMilliseconds / 1000.0;
@@ -49,9 +40,7 @@ class _PlayScreenState extends State<PlayScreen> {
 
       engine.tick(dt);
 
-      if (mounted) {
-        setState(() {});
-      }
+      if (mounted) setState(() {});
     });
   }
 
@@ -74,14 +63,6 @@ class _PlayScreenState extends State<PlayScreen> {
         endTime: endTime,
       ),
     );
-  }
-
-  Color _bgColor(int tier) {
-    if (tier < 1) return const Color(0xFFF6F7FB);
-    if (tier < 2) return const Color(0xFFEEF7FF);
-    if (tier < 3) return const Color(0xFFFFF4EA);
-    if (tier < 4) return const Color(0xFFF4ECFF);
-    return const Color(0xFFE9FFF2);
   }
 
   @override
@@ -110,15 +91,13 @@ class _PlayScreenState extends State<PlayScreen> {
           _downTime = null;
         },
         child: Container(
-          color: _bgColor(engine.backgroundTier()),
+          color: Colors.grey.shade100,
           child: Stack(
             children: [
               for (final e in engine.entities)
                 Positioned(
                   left: geom.laneLeft(e.lane),
-                  top: e.dir == FlowDir.down
-                      ? e.y
-                      : e.y - geom.tileHeight,
+                  top: e.y,
                   width: geom.laneWidth,
                   height: geom.tileHeight,
                   child: Container(
@@ -127,6 +106,12 @@ class _PlayScreenState extends State<PlayScreen> {
                       color: e.isBomb ? Colors.redAccent : Colors.black,
                       borderRadius: BorderRadius.circular(8),
                     ),
+                    child: e.isBomb
+                        ? const Center(
+                            child: Icon(Icons.warning,
+                                color: Colors.white),
+                          )
+                        : null,
                   ),
                 ),
               Positioned(
@@ -135,9 +120,7 @@ class _PlayScreenState extends State<PlayScreen> {
                 child: Text(
                   'Score ${engine.stats.score}  Lives ${5 - engine.stats.strikes}',
                   style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                      fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
