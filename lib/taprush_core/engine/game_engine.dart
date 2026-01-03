@@ -23,6 +23,10 @@ class TapRushEngine {
   static const int maxStrikes = 5;
   static const int maxBonusLives = 3;
 
+  // ---- Gesture dedupe (prevents double submit / double score) ----
+  int _lastGestureSig = 0;
+  int _lastGestureEndMs = 0;
+
   void setGeometry(LaneGeometry g) => _g = g;
 
   void reset({required GameMode newMode}) {
@@ -31,6 +35,9 @@ class TapRushEngine {
     _time = 0;
     _spawnTimer = 0;
     _id = 0;
+
+    _lastGestureSig = 0;
+    _lastGestureEndMs = 0;
 
     stats
       ..score = 0
@@ -112,6 +119,24 @@ class TapRushEngine {
     final g = _g;
     if (g == null || isGameOver) return const InputResult.miss();
 
+    // Dedupe: if UI submits the same gesture twice, ignore the duplicate.
+    final endMs = gesture.endTime.inMilliseconds;
+    final sig = Object.hash(
+      gesture.start.dx.round(),
+      gesture.start.dy.round(),
+      gesture.end.dx.round(),
+      gesture.end.dy.round(),
+      gesture.startTime.inMilliseconds,
+      gesture.endTime.inMilliseconds,
+    );
+
+    // Same signature + same endTime window => duplicate
+    if (sig == _lastGestureSig && (endMs - _lastGestureEndMs).abs() <= 5) {
+      return const InputResult.miss();
+    }
+    _lastGestureSig = sig;
+    _lastGestureEndMs = endMs;
+
     final res = input.resolve(
       g: g,
       entities: entities,
@@ -124,7 +149,10 @@ class TapRushEngine {
     entities.remove(target);
 
     if (target.isBomb) {
-      if (res.flicked) {
+      // Only allow bomb flick if the gesture itself is classified as a flick.
+      final isFlick = gesture.classify() == GestureType.flick;
+
+      if (res.flicked && isFlick) {
         stats.coins += 10;
         stats.bombsFlicked++;
 
