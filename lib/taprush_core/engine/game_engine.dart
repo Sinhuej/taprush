@@ -23,10 +23,6 @@ class TapRushEngine {
   static const int maxStrikes = 5;
   static const int maxBonusLives = 3;
 
-  // ---- Gesture dedupe (prevents double submit / double score) ----
-  int _lastGestureSig = 0;
-  int _lastGestureEndMs = 0;
-
   void setGeometry(LaneGeometry g) => _g = g;
 
   void reset({required GameMode newMode}) {
@@ -35,9 +31,6 @@ class TapRushEngine {
     _time = 0;
     _spawnTimer = 0;
     _id = 0;
-
-    _lastGestureSig = 0;
-    _lastGestureEndMs = 0;
 
     stats
       ..score = 0
@@ -84,21 +77,17 @@ class TapRushEngine {
 
   void _spawn(LaneGeometry g) {
     if (mode == GameMode.epic) {
-      for (final l in _epicDown) {
-        _trySpawn(g, l, FlowDir.down);
-      }
-      for (final l in _epicUp) {
-        _trySpawn(g, l, FlowDir.up);
-      }
+      for (final l in _epicDown) _trySpawn(g, l, FlowDir.down);
+      for (final l in _epicUp) _trySpawn(g, l, FlowDir.up);
     } else {
       final dir = mode == GameMode.reverse ? FlowDir.up : FlowDir.down;
-      final lane = _rng.nextInt(kLaneCount);
-      _trySpawn(g, lane, dir);
+      _trySpawn(g, _rng.nextInt(kLaneCount), dir);
     }
   }
 
   void _trySpawn(LaneGeometry g, int lane, FlowDir dir) {
-    final count = entities.where((e) => e.lane == lane && e.dir == dir).length;
+    final count =
+        entities.where((e) => e.lane == lane && e.dir == dir).length;
     if (count >= 2) return;
 
     final isBomb = _rng.nextDouble() < 0.08;
@@ -119,43 +108,21 @@ class TapRushEngine {
     final g = _g;
     if (g == null || isGameOver) return const InputResult.miss();
 
-    // Dedupe: if UI submits the same gesture twice, ignore the duplicate.
-    final endMs = gesture.endTime.inMilliseconds;
-    final sig = Object.hash(
-      gesture.start.dx.round(),
-      gesture.start.dy.round(),
-      gesture.end.dx.round(),
-      gesture.end.dy.round(),
-      gesture.startTime.inMilliseconds,
-      gesture.endTime.inMilliseconds,
-    );
+    final res = input.resolve(g: g, entities: entities, gesture: gesture);
+    final target = res.entity;
 
-    // Same signature + same endTime window => duplicate
-    if (sig == _lastGestureSig && (endMs - _lastGestureEndMs).abs() <= 5) {
-      return const InputResult.miss();
+    if (!res.hit || target == null || target.consumed) {
+      return res;
     }
-    _lastGestureSig = sig;
-    _lastGestureEndMs = endMs;
 
-    final res = input.resolve(
-      g: g,
-      entities: entities,
-      gesture: gesture,
-    );
-
-    if (!res.hit || res.entity == null) return res;
-
-    final target = res.entity!;
+    // 🔒 HARD LOCK
+    target.consumed = true;
     entities.remove(target);
 
     if (target.isBomb) {
-      // Only allow bomb flick if the gesture itself is classified as a flick.
-      final isFlick = gesture.classify() == GestureType.flick;
-
-      if (res.flicked && isFlick) {
+      if (res.flicked) {
         stats.coins += 10;
         stats.bombsFlicked++;
-
         if (stats.bombsFlicked % 20 == 0 &&
             stats.bonusLivesEarned < maxBonusLives) {
           stats.bonusLivesEarned++;
