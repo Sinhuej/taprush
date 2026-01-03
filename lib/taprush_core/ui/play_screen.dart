@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
-import '../engine/models.dart';
 import '../engine/game_engine.dart';
+import '../engine/models.dart';
 import '../engine/gesture.dart';
 
 class PlayScreen extends StatefulWidget {
@@ -47,12 +49,6 @@ class _PlayScreenState extends State<PlayScreen> {
     super.dispose();
   }
 
-  void _restart() {
-    engine.reset(newMode: widget.mode);
-    _lastFrame = DateTime.now();
-    setState(() {});
-  }
-
   void _submitGesture(Offset start, Offset end, int durationMs) {
     final endTime =
         Duration(milliseconds: DateTime.now().millisecondsSinceEpoch);
@@ -68,10 +64,19 @@ class _PlayScreenState extends State<PlayScreen> {
     );
   }
 
+  Color _bgColor(int tier) {
+    if (tier < 1) return const Color(0xFFF6F7FB);
+    if (tier < 2) return const Color(0xFFEEF7FF);
+    if (tier < 3) return const Color(0xFFFFF4EA);
+    if (tier < 4) return const Color(0xFFF4ECFF);
+    return const Color(0xFFE9FFF2);
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final geom = LaneGeometry.fromSize(size.width, size.height);
+
     engine.setGeometry(geom);
 
     if (!_initialized) {
@@ -80,91 +85,97 @@ class _PlayScreenState extends State<PlayScreen> {
     }
 
     return Scaffold(
-      body: Stack(
-        children: [
-          Listener(
-            behavior: HitTestBehavior.opaque,
-            onPointerDown: (e) {
-              _downPos = e.localPosition;
-              _lastPos = e.localPosition;
-              _downTime = DateTime.now();
-            },
-            onPointerMove: (e) {
-              _lastPos = e.localPosition;
-            },
-            onPointerUp: (e) {
-              if (_downPos == null || _downTime == null) return;
-              final dur = DateTime.now()
-                  .difference(_downTime!)
-                  .inMilliseconds
-                  .clamp(1, 1000);
-              _submitGesture(_downPos!, _lastPos ?? _downPos!, dur);
-              _downPos = null;
-              _downTime = null;
-            },
-            child: Container(
-              color: Colors.white,
-              child: Stack(
-                children: [
-                  for (final e in engine.entities)
-                    Positioned(
-                      left: geom.laneLeft(e.lane),
-                      top: e.dir == FlowDir.down
-                          ? e.y
-                          : e.y - geom.tileHeight,
-                      width: geom.laneWidth,
-                      height: geom.tileHeight,
-                      child: Center(
-                        child: e.isBomb
-                            ? const Text('💣',
-                                style: TextStyle(fontSize: 28))
-                            : Container(
-                                margin: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: Colors.black,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                      ),
-                    ),
+      body: Listener(
+        behavior: HitTestBehavior.opaque,
+        onPointerDown: (e) {
+          _downPos = e.localPosition;
+          _lastPos = e.localPosition;
+          _downTime = DateTime.now();
+        },
+        onPointerMove: (e) {
+          _lastPos = e.localPosition;
+        },
+        onPointerUp: (e) {
+          if (_downPos == null || _downTime == null) return;
+          final dur = DateTime.now()
+              .difference(_downTime!)
+              .inMilliseconds
+              .clamp(1, 1000);
+          _submitGesture(_downPos!, _lastPos ?? _downPos!, dur);
+          _downPos = null;
+          _downTime = null;
+        },
+        child: Container(
+          color: _bgColor(engine.backgroundTier()),
+          child: Stack(
+            children: [
+              // 🎮 TILES
+              for (final e in engine.entities)
+                Positioned(
+                  left: geom.laneLeft(e.lane),
+                  top: e.dir == FlowDir.down
+                      ? e.y
+                      : e.y - geom.tileHeight,
+                  width: geom.laneWidth,
+                  height: geom.tileHeight,
+                  child: e.isBomb
+                      ? const Center(
+                          child: Text(
+                            '💣',
+                            style: TextStyle(fontSize: 28),
+                          ),
+                        )
+                      : Container(
+                          margin: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.black,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                ),
 
-                  Positioned(
-                    top: 40,
-                    left: 20,
-                    child: Text(
-                      'Score ${engine.stats.score}  Lives ${5 - engine.stats.strikes}',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+              // HUD
+              Positioned(
+                top: 40,
+                left: 20,
+                child: Text(
+                  'Score ${engine.stats.score}  Lives ${5 - engine.stats.strikes}',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
                   ),
-                ],
+                ),
               ),
-            ),
+
+              // 🛑 GAME OVER + RESTART
+              if (engine.isGameOver)
+                Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'GAME OVER',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            engine.reset(newMode: widget.mode);
+                          });
+                        },
+                        child: const Text('Restart'),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           ),
-
-          if (engine.isGameOver)
-            Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    'GAME OVER',
-                    style:
-                        TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: _restart,
-                    child: const Text('Restart'),
-                  ),
-                ],
-              ),
-            ),
-        ],
+        ),
       ),
     );
   }
 }
-

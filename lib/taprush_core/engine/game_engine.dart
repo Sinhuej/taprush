@@ -1,43 +1,44 @@
 InputResult onGesture(GestureSample gesture) {
-  final g = _g;
-  if (g == null || isGameOver) return const InputResult.miss();
+    final g = _g;
+    if (g == null || isGameOver) return const InputResult.miss();
 
-  final res = input.resolve(
-    g: g,
-    entities: entities,
-    gesture: gesture,
-  );
+    final res = input.resolve(
+      g: g,
+      entities: entities,
+      gesture: gesture,
+    );
 
-  if (!res.hit || res.entity == null) return res;
+    if (!res.hit || res.entity == null) return res;
 
-  final target = res.entity!;
-  if (target.consumed) return const InputResult.miss();
+    final target = res.entity!;
 
-  target.consumed = true;
-  entities.remove(target);
+    // 🔒 HARD GUARD — one entity, one score
+    if (target.consumed) return const InputResult.miss();
+    target.consumed = true;
 
-  if (target.isBomb) {
-    if (res.flicked) {
-      stats.coins += 10;
-      stats.bombsFlicked++;
+    entities.remove(target);
 
-      if (stats.bombsFlicked % 20 == 0 &&
-          stats.bonusLivesEarned < maxBonusLives) {
-        stats.bonusLivesEarned++;
-        stats.strikes = max(0, stats.strikes - 1);
+    if (target.isBomb) {
+      if (res.flicked) {
+        stats.coins += 10;
+        stats.bombsFlicked++;
+
+        if (stats.bombsFlicked % 20 == 0 &&
+            stats.bonusLivesEarned < maxBonusLives) {
+          stats.bonusLivesEarned++;
+          stats.strikes = max(0, stats.strikes - 1);
+        }
+      } else {
+        stats.onStrike();
       }
-    } else {
-      stats.onStrike();
+      return res;
     }
+
+    if (res.grade == HitGrade.perfect) {
+      stats.onPerfect(coinMult: 1);
+    } else {
+      stats.onGood(coinMult: 1);
+    }
+
     return res;
   }
-
-  if (res.grade == HitGrade.perfect) {
-    stats.onPerfect(coinMult: 1);
-  } else {
-    stats.onGood(coinMult: 1);
-  }
-
-  return res;
-}
-
