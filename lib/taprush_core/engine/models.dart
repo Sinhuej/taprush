@@ -30,16 +30,8 @@ class LaneGeometry {
 
   double laneLeft(int lane) => lane * laneWidth;
 
-  int laneOfX(double x) {
-    final lane = (x / laneWidth).floor();
-    return lane.clamp(0, kLaneCount - 1);
-  }
-
-  double centerY(TapEntity e) {
-    return e.dir == FlowDir.down
-        ? e.y + tileHeight / 2
-        : e.y - tileHeight / 2;
-  }
+  double centerY(TapEntity e) =>
+      e.dir == FlowDir.down ? e.y + tileHeight / 2 : e.y - tileHeight / 2;
 }
 
 class TapEntity {
@@ -67,13 +59,18 @@ class TapEntity {
   bool containsTap(LaneGeometry g, double x, double yTap) {
     if (consumed) return false;
 
-    final left = g.laneLeft(lane);
-    final right = left + g.laneWidth;
+    const double slop = 12;
+
+    final left = g.laneLeft(lane) - slop;
+    final right = left + g.laneWidth + slop * 2;
 
     final top = dir == FlowDir.down ? y : y - g.tileHeight;
     final bottom = top + g.tileHeight;
 
-    return x >= left && x <= right && yTap >= top && yTap <= bottom;
+    return x >= left &&
+        x <= right &&
+        yTap >= top - slop &&
+        yTap <= bottom + slop;
   }
 }
 
