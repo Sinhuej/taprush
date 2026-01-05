@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 
@@ -25,8 +24,6 @@ class _PlayScreenState extends State<PlayScreen> {
   Offset? _lastPos;
   DateTime? _downTime;
 
-  FlickFx? _flickFx;
-
   bool _initialized = false;
 
   @override
@@ -39,13 +36,6 @@ class _PlayScreenState extends State<PlayScreen> {
       _lastFrame = now;
 
       engine.tick(dt);
-
-      if (_flickFx != null) {
-        _flickFx!.advance(dt);
-        if (_flickFx!.done) {
-          _flickFx = null;
-        }
-      }
 
       if (mounted) setState(() {});
     });
@@ -62,7 +52,7 @@ class _PlayScreenState extends State<PlayScreen> {
         Duration(milliseconds: DateTime.now().millisecondsSinceEpoch);
     final startTime = endTime - Duration(milliseconds: durationMs);
 
-    final res = engine.onGesture(
+    engine.onGesture(
       GestureSample(
         start: start,
         end: end,
@@ -70,12 +60,6 @@ class _PlayScreenState extends State<PlayScreen> {
         endTime: endTime,
       ),
     );
-
-    if (res.hit && res.bomb && res.flicked) {
-      final dir = end - start;
-      final n = dir / max(1, dir.distance);
-      _flickFx = FlickFx(start: start, end: start + n * 160);
-    }
   }
 
   @override
@@ -152,8 +136,10 @@ class _PlayScreenState extends State<PlayScreen> {
                   children: [
                     const Text(
                       'GAME OVER',
-                      style:
-                          TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton(

@@ -30,6 +30,10 @@ class LaneGeometry {
 
   double laneLeft(int lane) => lane * laneWidth;
 
+  int laneOfX(double x) {
+    return (x / laneWidth).floor().clamp(0, kLaneCount - 1);
+  }
+
   double centerY(TapEntity e) =>
       e.dir == FlowDir.down ? e.y + tileHeight / 2 : e.y - tileHeight / 2;
 }
