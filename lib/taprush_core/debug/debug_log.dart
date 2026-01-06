@@ -1,27 +1,20 @@
-class DebugEvent {
-  final double time;
-  final String tag;
-  final String message;
-
-  DebugEvent(this.time, this.tag, this.message);
-}
-
 class DebugLog {
-  static const int maxEvents = 300;
-  static final List<DebugEvent> _events = [];
+  static bool enabled = false;
+  static const int maxLines = 400;
+  static final List<String> _lines = [];
 
-  static void log(String tag, String message, double time) {
-    _events.add(DebugEvent(time, tag, message));
-    if (_events.length > maxEvents) {
-      _events.removeAt(0);
-    }
+  static void log(String tag, String msg, double time) {
+    if (!enabled) return;
+    final line = '[${time.toStringAsFixed(2)}][$tag] $msg';
+    _lines.add(line);
+    if (_lines.length > maxLines) _lines.removeAt(0);
   }
 
-  static List<DebugEvent> snapshot() {
-    return List.unmodifiable(_events);
+  static List<String> snapshot() {
+    return List.unmodifiable(_lines);
   }
 
   static void clear() {
-    _events.clear();
+    _lines.clear();
   }
 }

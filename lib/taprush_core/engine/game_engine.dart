@@ -110,8 +110,9 @@ class TapRushEngine {
     );
   }
 
+
   InputResult onGesture(GestureSample gesture) {
-    final gestureStartTs = DateTime.now().millisecondsSinceEpoch;
+    final startTs = DateTime.now().millisecondsSinceEpoch;
     final g = _g;
 
     DebugLog.log('GESTURE', gesture.toString(), _time);
@@ -126,11 +127,10 @@ class TapRushEngine {
       gesture: gesture,
     );
 
-    final gestureEndTs = DateTime.now().millisecondsSinceEpoch;
-
+    final endTs = DateTime.now().millisecondsSinceEpoch;
     DebugLog.log(
       'GESTURE_TIME',
-      'duration=${gestureEndTs - gestureStartTs}ms hit=${res.hit} flick=${res.flicked}',
+      'duration=${endTs - startTs}ms hit=${res.hit} flick=${res.flicked}',
       _time,
     );
 
@@ -140,9 +140,8 @@ class TapRushEngine {
 
     final target = res.entity!;
 
-    // HARD guard: entity can only score once
     if (target.consumed) {
-      DebugLog.log('DOUBLE_SCORE', 'Blocked duplicate hit id=${target.id}', _time);
+      DebugLog.log('DOUBLE_SCORE', 'Blocked id=${target.id}', _time);
       return const InputResult.miss();
     }
 
@@ -159,12 +158,6 @@ class TapRushEngine {
       if (res.flicked) {
         stats.coins += 10;
         stats.bombsFlicked++;
-
-        if (stats.bombsFlicked % 20 == 0 &&
-            stats.bonusLivesEarned < maxBonusLives) {
-          stats.bonusLivesEarned++;
-          stats.strikes = max(0, stats.strikes - 1);
-        }
       } else {
         stats.onStrike();
       }
@@ -179,13 +172,5 @@ class TapRushEngine {
 
     DebugLog.log('SCORE', 'score=${stats.score}', _time);
     return res;
-  }
-
-  int backgroundTier() {
-    if (_time < 10) return 0;
-    if (_time < 25) return 1;
-    if (_time < 45) return 2;
-    if (_time < 70) return 3;
-    return 4;
   }
 }
