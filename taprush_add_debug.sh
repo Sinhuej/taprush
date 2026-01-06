@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-echo "🔧 Adding TapRush debug system (no /tmp, repo-safe)..."
+echo "🔧 Adding TapRush debug + double-gesture guard (repo-safe)..."
 
 ENGINE_FILE="lib/taprush_core/engine/game_engine.dart"
 ENGINE_TMP="lib/taprush_core/engine/.game_engine.tmp.dart"
@@ -37,7 +37,7 @@ DART
 echo "✅ DebugLog created"
 
 # --------------------------------------------------
-# 2. Rewrite onGesture cleanly (NO backslashes)
+# 2. Rewrite engine (preserve everything except onGesture)
 # --------------------------------------------------
 awk '
 BEGIN { keep=1 }
@@ -46,11 +46,41 @@ keep { print }
 /^}/ && keep==0 { keep=1 }
 ' "$ENGINE_FILE" > "$ENGINE_TMP"
 
+# --------------------------------------------------
+# 3. Append SAFE onGesture with DOUBLE-GESTURE guard
+# --------------------------------------------------
 cat >> "$ENGINE_TMP" <<'DART'
 
+  // --------------------------------------------------
+  // Gesture debounce + double-registration protection
+  // --------------------------------------------------
+  int _lastGestureTs = 0;
+  int _lastGestureHash = 0;
+  static const int _gestureDebounceMs = 40;
+
   InputResult onGesture(GestureSample gesture) {
-    final startTs = DateTime.now().millisecondsSinceEpoch;
+    final now = DateTime.now().millisecondsSinceEpoch;
     final g = _g;
+
+    final gestureHash = Object.hash(
+      gesture.type,
+      gesture.lane,
+      gesture.direction,
+    );
+
+    // 🚫 DOUBLE GESTURE GUARD
+    if (now - _lastGestureTs < _gestureDebounceMs &&
+        gestureHash == _lastGestureHash) {
+      DebugLog.log(
+        'DOUBLE_GESTURE',
+        'Blocked duplicate gesture (${now - _lastGestureTs}ms)',
+        _time,
+      );
+      return const InputResult.miss();
+    }
+
+    _lastGestureTs = now;
+    _lastGestureHash = gestureHash;
 
     DebugLog.log('GESTURE', gesture.toString(), _time);
 
@@ -64,10 +94,9 @@ cat >> "$ENGINE_TMP" <<'DART'
       gesture: gesture,
     );
 
-    final endTs = DateTime.now().millisecondsSinceEpoch;
     DebugLog.log(
-      'GESTURE_TIME',
-      'duration=${endTs - startTs}ms hit=${res.hit} flick=${res.flicked}',
+      'GESTURE_RESULT',
+      'hit=${res.hit} flick=${res.flicked}',
       _time,
     );
 
@@ -77,8 +106,13 @@ cat >> "$ENGINE_TMP" <<'DART'
 
     final target = res.entity!;
 
+    // 🔒 HARD ENTITY GUARD
     if (target.consumed) {
-      DebugLog.log('DOUBLE_SCORE', 'Blocked id=${target.id}', _time);
+      DebugLog.log(
+        'DOUBLE_SCORE',
+        'Blocked entity id=${target.id}',
+        _time,
+      );
       return const InputResult.miss();
     }
 
@@ -115,11 +149,7 @@ DART
 
 mv "$ENGINE_TMP" "$ENGINE_FILE"
 
-echo "✅ Engine onGesture rewritten safely"
-
-# --------------------------------------------------
-# 3. Done
-# --------------------------------------------------
+echo "✅ Engine updated with double-gesture protection"
 echo "🎯 Debug system installed"
-echo "➡ Enable from Options screen"
-echo "➡ Logs persist after game ends"
+echo "➡ Enable DebugLog.enabled = true from Options screen"
+echo "➡ Logs persist even after game ends"
