@@ -1,3 +1,4 @@
+import 'package:taprush/taprush_core/debug/debug_panel.dart';
 import 'package:flutter/material.dart';
 import '../app/app_state.dart';
 import '../engine/models.dart';

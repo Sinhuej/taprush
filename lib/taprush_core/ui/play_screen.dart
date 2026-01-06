@@ -108,7 +108,6 @@ class _PlayScreenState extends State<PlayScreen> {
                   child: const Icon(Icons.bug_report),
                 ),
               ),
-              if (_showDebug) const DebugOverlay(),
             for (final e in engine.entities)
               Positioned(
                 left: geom.laneLeft(e.lane),
@@ -161,7 +160,6 @@ class _PlayScreenState extends State<PlayScreen> {
                   child: const Icon(Icons.bug_report),
                 ),
               ),
-              if (_showDebug) const DebugOverlay(),
                     const Text(
                       'GAME OVER',
                       style: TextStyle(
