@@ -1,0 +1,13 @@
+  void _submitGesture(Offset start, Offset end, int durationMs) {
+    final now = Duration(milliseconds: DateTime.now().millisecondsSinceEpoch);
+    final startTime = now - Duration(milliseconds: durationMs);
+
+    engine.onGesture(
+      GestureSample(
+        start: start,
+        end: end,
+        startTime: startTime,
+        endTime: now,
+      ),
+    );
+  }

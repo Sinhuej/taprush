@@ -1,0 +1,47 @@
+  void _handlePanEnd(DragEndDetails d) {
+    if (_gestureStart == null || _gestureStartTime == null) return;
+
+    final now = DateTime.now();
+    final durationMs =
+        now.difference(_gestureStartTime!).inMilliseconds.clamp(1, 1000);
+
+    final endTime =
+        Duration(milliseconds: now.millisecondsSinceEpoch);
+    final startTime =
+        endTime - Duration(milliseconds: durationMs);
+
+    final sample = GestureSample(
+      start: _gestureStart!,
+      end: _lastPanPos ?? _gestureStart!,
+      startTime: startTime,
+      endTime: endTime,
+    );
+
+    final res = _engine.onGesture(sample);
+
+    // FX: bomb flick throw
+    if (res.hit && res.bomb && res.flicked) {
+      final dir = sample.end - sample.start;
+      final n = _norm(dir);
+      const throwDist = 160.0;
+      final end = _gestureStart! + n * throwDist;
+      _flickFx = FlickFx(start: _gestureStart!, end: end);
+    }
+
+    // FX: perfect ring
+    if (res.hit && !res.bomb && res.grade == HitGrade.perfect) {
+      _perfectRingPos = _gestureStart;
+      _perfectRingAt = DateTime.now();
+    }
+
+    // Game over line (single transition)
+    if (_engine.isGameOver) {
+      _onGameOver();
+    }
+
+    _gestureStart = null;
+    _gestureStartTime = null;
+    _lastPanPos = null;
+
+    setState(() {});
+  }

@@ -1,3 +1,4 @@
+import '../debug/debug_log.dart';
 import 'dart:math';
 
 import 'models.dart';
@@ -110,6 +111,8 @@ class TapRushEngine {
   }
 
   InputResult onGesture(GestureSample gesture) {
+    final gestureStartTs = DateTime.now().millisecondsSinceEpoch;
+    DebugLog.log('GESTURE', gesture.toString(), _time);
     final g = _g;
     if (g == null || isGameOver) return const InputResult.miss();
 
@@ -119,13 +122,25 @@ class TapRushEngine {
       gesture: gesture,
     );
 
+    final gestureEndTs = DateTime.now().millisecondsSinceEpoch;
+    DebugLog.log(
+      'GESTURE_TIME',
+      'duration=${gestureEndTs - gestureStartTs}ms hit=${res.hit} flick=${res.flicked}',
+      _time,
+    );
     if (!res.hit || res.entity == null) return res;
 
     final target = res.entity!;
     if (target.consumed) return const InputResult.miss();
 
     target.consumed = true;
+    if (target.consumed) {
+      DebugLog.log('DOUBLE_SCORE', 'Entity ${target.id} scored twice', _time);
+      return const InputResult.miss();
+    }
+    target.consumed = true;
     entities.remove(target);
+    DebugLog.log('HIT', 'id=${target.id} bomb=${target.isBomb} flick=${res.flicked}', _time);
 
     if (target.isBomb) {
       if (res.flicked) {
@@ -140,6 +155,12 @@ class TapRushEngine {
       } else {
         stats.onStrike();
       }
+    final gestureEndTs = DateTime.now().millisecondsSinceEpoch;
+    DebugLog.log(
+      'GESTURE_TIME',
+      'duration=${gestureEndTs - gestureStartTs}ms hit=${res.hit} flick=${res.flicked}',
+      _time,
+    );
       return res;
     }
 
@@ -147,8 +168,15 @@ class TapRushEngine {
       stats.onPerfect();
     } else {
       stats.onGood();
+    DebugLog.log('SCORE', 'score=${stats.score}', _time);
     }
 
+    final gestureEndTs = DateTime.now().millisecondsSinceEpoch;
+    DebugLog.log(
+      'GESTURE_TIME',
+      'duration=${gestureEndTs - gestureStartTs}ms hit=${res.hit} flick=${res.flicked}',
+      _time,
+    );
     return res;
   }
 

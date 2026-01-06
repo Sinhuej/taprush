@@ -1,0 +1,40 @@
+[33mab5ecfe[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Add CI job to regenerate android folder
+[33m13c7d10[m Restore Android build to Groovy-only baseline
+[33m600d7b6[m Align Java and Kotlin JVM targets to 17
+[33m7fb0c02[m Fix Ticker import (Flutter 3.24 requires scheduler.dart)
+[33m25930e4[m Restore classic Flutter Groovy apply for Android build
+[33m9f8adf3[m Return Android to Flutter-standard Groovy build (remove Kotlin DSL)
+[33mf0cf538[m Remove invalid includeBuild for Flutter tools (CI-safe)
+[33m18be086[m[33m ([m[1;33mtag: [m[1;33mlast-green[m[33m)[m Restore Flutter Gradle plugin resolution via includeBuild
+[33m38634a7[m Resolve Kotlin Android plugin via pluginManagement resolutionStrategy
+[33meeeb8e8[m Fix Kotlin plugin resolution via pluginManagement in settings.gradle
+[33me7a851e[m Restore pluginManagement for Kotlin and Android plugins
+[33mb10c02d[m Fix Android project structure: include :app module
+[33m0e7d3bf[m Add Gradle repo mirrors to prevent Maven Central 403 errors
+[33me24e391[m Fix patch runner: wire patch_04 visuals correctly
+[33m2fa25b0[m TapRush stabilization: visuals, feedback, clarity
+[33mf796215[m Fix bombs flicking, deterministic input, proper game over
+[33mea31e37[m Add distanceSquared to GestureSample for flick detection
+[33m58cf12a[m Fix input discipline, reliable bomb flicks, and tile overlap
+[33md7042f9[m Engine: deterministic input, no tile overlap, proper scoring & bomb handling
+[33m32ea5d6[m Restore tile rendering after raw input rewrite
+[33me52827c[m Stabilize input with raw pointer handling, fix bomb flick rewards, epic lane split, tap reliability
+[33mfb174fd[m Fix background tiering and finalize epic + bomb reward logic
+[33m33ea5a2[m Fix tap reliability, epic lane split, bomb flick rewards with bonus lives
+[33mb97f53d[m TapRush: start screen, store, reliable flick bombs, fair accuracy, epic ramp
+[33m797ce01[m TapRush: final UI polish, splash/icon prep, release build fix
+[33md83924e[m TapRush: viral-ready polish with flickable bombs, FX feedback, and humiliation system
+[33mf4ef002[m TapRush core: 6-lane piano-tile gameplay with flickable bombs and gesture-based input
+[33m23592d2[m TapRush: full playable build with modes, sideways rotation anti-cheat, store gating
+[33m6eda661[m TapRush: full playable build with modes and sideways rotation anti-cheat
+[33m0e89c66[m Add Multi-Color Mode cosmetic (100k coin unlock, cat-only)
+[33mdf6e466[m Remove VoidCallback from UI (SlimNation rule)
+[33m3f581eb[m Fix cheat sequence: remove VoidCallback, enforce true 3s animation
+[33m73c00e8[m Fix cheat cinematic timing: real 3-phase 1s animation
+[33m104d4fc[m Add secret long-press cheat gesture (1s cinematic)
+[33m3e383c5[m Anti-cheat Step A: cinematic pull-in/compress/explode visuals (3s)
+[33mbe9b9ab[m Anti-cheat: detect bot taps, run 3s cinematic sequence, zero score
+[33m14feb34[m Fix: restore feedbackMs to GameConfig
+[33m734929c[m Phase B: tap anywhere + closest tile selection (miss if none close)
+[33m8d247f6[m SlimNation: full lib rewrite into modular architecture (Phase A foundation)
+[33m8b5e9ba[m Phase A: safe start screen + phase gate
