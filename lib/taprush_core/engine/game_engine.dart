@@ -123,11 +123,7 @@ class TapRushEngine {
     final now = DateTime.now().millisecondsSinceEpoch;
     final g = _g;
 
-    final gestureHash = Object.hash(
-      gesture.type,
-      gesture.lane,
-      gesture.direction,
-    );
+    final gestureHash = gesture.toString().hashCode;
 
     // 🚫 DOUBLE GESTURE GUARD
     if (now - _lastGestureTs < _gestureDebounceMs &&
