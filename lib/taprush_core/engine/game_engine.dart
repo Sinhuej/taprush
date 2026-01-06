@@ -110,75 +110,75 @@ class TapRushEngine {
     );
   }
 
-  InputResult onGesture(GestureSample gesture) {\
-    final gestureStartTs = DateTime.now().millisecondsSinceEpoch;\
-    final g = _g;\
-\
-    DebugLog.log('GESTURE', gesture.toString(), _time);\
-\
-    if (g == null || isGameOver) {\
-      return const InputResult.miss();\
-    }\
-\
-    final res = input.resolve(\
-      g: g,\
-      entities: entities,\
-      gesture: gesture,\
-    );\
-\
-    final gestureEndTs = DateTime.now().millisecondsSinceEpoch;\
-\
-    DebugLog.log(\
-      'GESTURE_TIME',\
-      'duration=${gestureEndTs - gestureStartTs}ms hit=${res.hit} flick=${res.flicked}',\
-      _time,\
-    );\
-\
-    if (!res.hit || res.entity == null) {\
-      return res;\
-    }\
-\
-    final target = res.entity!;\
-\
-    // HARD guard: entity can only score once\
-    if (target.consumed) {\
-      DebugLog.log('DOUBLE_SCORE', 'Blocked duplicate hit id=${target.id}', _time);\
-      return const InputResult.miss();\
-    }\
-\
-    target.consumed = true;\
-    entities.remove(target);\
-\
-    DebugLog.log(\
-      'HIT',\
-      'id=${target.id} bomb=${target.isBomb} flick=${res.flicked}',\
-      _time,\
-    );\
-\
-    if (target.isBomb) {\
-      if (res.flicked) {\
-        stats.coins += 10;\
-        stats.bombsFlicked++;\
-\
-        if (stats.bombsFlicked % 20 == 0 &&\
-            stats.bonusLivesEarned < maxBonusLives) {\
-          stats.bonusLivesEarned++;\
-          stats.strikes = max(0, stats.strikes - 1);\
-        }\
-      } else {\
-        stats.onStrike();\
-      }\
-      return res;\
-    }\
-\
-    if (res.grade == HitGrade.perfect) {\
-      stats.onPerfect();\
-    } else {\
-      stats.onGood();\
-    }\
-\
-    DebugLog.log('SCORE', 'score=${stats.score}', _time);\
-    return res;\
+  InputResult onGesture(GestureSample gesture) {
+    final gestureStartTs = DateTime.now().millisecondsSinceEpoch;
+    final g = _g;
+
+    DebugLog.log('GESTURE', gesture.toString(), _time);
+
+    if (g == null || isGameOver) {
+      return const InputResult.miss();
+    }
+
+    final res = input.resolve(
+      g: g,
+      entities: entities,
+      gesture: gesture,
+    );
+
+    final gestureEndTs = DateTime.now().millisecondsSinceEpoch;
+
+    DebugLog.log(
+      'GESTURE_TIME',
+      'duration=${gestureEndTs - gestureStartTs}ms hit=${res.hit} flick=${res.flicked}',
+      _time,
+    );
+
+    if (!res.hit || res.entity == null) {
+      return res;
+    }
+
+    final target = res.entity!;
+
+    // HARD guard: entity can only score once
+    if (target.consumed) {
+      DebugLog.log('DOUBLE_SCORE', 'Blocked duplicate hit id=${target.id}', _time);
+      return const InputResult.miss();
+    }
+
+    target.consumed = true;
+    entities.remove(target);
+
+    DebugLog.log(
+      'HIT',
+      'id=${target.id} bomb=${target.isBomb} flick=${res.flicked}',
+      _time,
+    );
+
+    if (target.isBomb) {
+      if (res.flicked) {
+        stats.coins += 10;
+        stats.bombsFlicked++;
+
+        if (stats.bombsFlicked % 20 == 0 &&
+            stats.bonusLivesEarned < maxBonusLives) {
+          stats.bonusLivesEarned++;
+          stats.strikes = max(0, stats.strikes - 1);
+        }
+      } else {
+        stats.onStrike();
+      }
+      return res;
+    }
+
+    if (res.grade == HitGrade.perfect) {
+      stats.onPerfect();
+    } else {
+      stats.onGood();
+    }
+
+    DebugLog.log('SCORE', 'score=${stats.score}', _time);
+    return res;
   }
 
   int backgroundTier() {
