@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../debug/debug_log.dart';
 
 class StoreScreen extends StatefulWidget {
@@ -10,6 +11,14 @@ class StoreScreen extends StatefulWidget {
 
 class _StoreScreenState extends State<StoreScreen> {
   bool debugEnabled = DebugLog.enabled;
+
+  void _copyLogs() {
+    final text = DebugLog.snapshot().join('\n');
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Debug logs copied to clipboard')),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +41,6 @@ class _StoreScreenState extends State<StoreScreen> {
       ),
       body: Column(
         children: [
-          // --- Store content placeholder ---
           const Padding(
             padding: EdgeInsets.all(16),
             child: Text(
@@ -70,8 +78,15 @@ class _StoreScreenState extends State<StoreScreen> {
             ),
           ),
 
+          // --- Controls ---
           Row(
             children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: _copyLogs,
+                  child: const Text('Copy Logs'),
+                ),
+              ),
               Expanded(
                 child: TextButton(
                   onPressed: () {
