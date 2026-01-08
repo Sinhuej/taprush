@@ -120,6 +120,14 @@ class TapRushEngine {
   int _lastGestureHash = 0;
   static const int _gestureDebounceMs = 40;
 
+
+  int _accuracyBonus() {
+    final acc = stats.accuracy;
+    if (acc >= 0.98) return 2;
+    if (acc >= 0.95) return 1;
+    return 0;
+  }
+
   InputResult onGesture(GestureSample gesture) {
     final now = DateTime.now().millisecondsSinceEpoch;
     final g = _g;
@@ -197,6 +205,11 @@ class TapRushEngine {
       stats.onPerfect();
     } else {
       stats.onGood();
+      final bonus = _accuracyBonus();
+      if (bonus > 0) {
+        stats.score += bonus;
+        DebugLog.log('ACCURACY_BONUS', '+$bonus', _time);
+      }
     }
 
     DebugLog.log('SCORE', 'score=${stats.score}', _time);
