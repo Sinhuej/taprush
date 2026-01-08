@@ -103,4 +103,7 @@ class RunStats {
   void onStrike() {
     strikes++;
   }
+  double get accuracy =>
+      totalHits == 0 ? 0.0 : perfectHits / totalHits;
+
 }
