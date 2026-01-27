@@ -40,15 +40,16 @@ class InputResolver {
     for (final e in entities) {
       if (e.consumed) continue;
 
+      // Derive entity center X from lane geometry (TapEntity has no centerX)
+      final double entityCenterX =
+          (e.lane * g.laneWidth) + (g.laneWidth / 2);
+
+      final double dx = (entityCenterX - gesture.start.dx).abs();
+      if (dx > tolerancePx) continue;
+
       final top = e.dir == FlowDir.down ? e.y : e.y - g.tileHeight;
       final centerY = top + g.tileHeight / 2;
-
-      // Vertical proximity (existing hit window logic stays implicit)
       final dy = (centerY - gesture.start.dy).abs();
-
-      // Horizontal proximity (entity-first)
-      final dx = (e.centerX - gesture.start.dx).abs();
-      if (dx > tolerancePx) continue;
 
       DebugLog.log(
         'ENTITY',
@@ -57,7 +58,7 @@ class InputResolver {
         g.height,
       );
 
-      // Weighted distance: horizontal intent matters more than vertical
+      // Weighted distance: horizontal intent dominates
       final score = dx + (dy * 0.25);
 
       if (score < bestScore) {
