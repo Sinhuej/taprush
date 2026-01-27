@@ -7,6 +7,10 @@ class InputResolver {
   static const double flickVelocityMin = 0.20;
   static const double flickDistanceMin = 60;
 
+  // Horizontal forgiveness as a fraction of lane width
+  // 0.4 = ±40% of lane width
+  static const double horizontalToleranceFactor = 0.4;
+
   InputResult resolve({
     required LaneGeometry g,
     required List<TapEntity> entities,
@@ -28,33 +32,42 @@ class InputResolver {
       g.height,
     );
 
-    final lane =
-        (gesture.start.dx / g.laneWidth).floor().clamp(0, kLaneCount - 1);
+    final double tolerancePx = g.laneWidth * horizontalToleranceFactor;
 
     TapEntity? best;
-    double bestDy = double.infinity;
+    double bestScore = double.infinity;
 
     for (final e in entities) {
-      if (e.lane != lane || e.consumed) continue;
+      if (e.consumed) continue;
 
       final top = e.dir == FlowDir.down ? e.y : e.y - g.tileHeight;
       final centerY = top + g.tileHeight / 2;
+
+      // Vertical proximity (existing hit window logic stays implicit)
       final dy = (centerY - gesture.start.dy).abs();
+
+      // Horizontal proximity (entity-first)
+      final dx = (e.centerX - gesture.start.dx).abs();
+      if (dx > tolerancePx) continue;
 
       DebugLog.log(
         'ENTITY',
-        'id=${e.id} bomb=${e.isBomb} dy=${dy.toStringAsFixed(1)}',
+        'id=${e.id} bomb=${e.isBomb} dx=${dx.toStringAsFixed(1)} '
+        'dy=${dy.toStringAsFixed(1)}',
         g.height,
       );
 
-      if (dy < bestDy) {
-        bestDy = dy;
+      // Weighted distance: horizontal intent matters more than vertical
+      final score = dx + (dy * 0.25);
+
+      if (score < bestScore) {
+        bestScore = score;
         best = e;
       }
     }
 
     if (best == null) {
-      DebugLog.log('MISS', 'No entity in lane $lane', g.height);
+      DebugLog.log('MISS', 'No clear entity intent', g.height);
       return const InputResult.miss();
     }
 
