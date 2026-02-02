@@ -35,7 +35,6 @@ class InputResolver {
     final double tolerancePx = g.laneWidth * horizontalToleranceFactor;
 
     // Vertical gate: prevents "tap below/above still hits"
-    // Eligible only if tile center is within ±0.5 tile height of the tap
     final double toleranceY = g.tileHeight * 0.5;
 
     TapEntity? best;
@@ -53,9 +52,9 @@ class InputResolver {
 
       final top = e.dir == FlowDir.down ? e.y : e.y - g.tileHeight;
       final centerY = top + g.tileHeight / 2;
-      final dy = (centerY - gesture.start.dy).abs();
 
-      // 🔒 HARD VERTICAL ELIGIBILITY GATE
+      // 🔑 Vertical timing anchored to HIT LINE (not finger Y)
+      final double dy = (centerY - g.hitY).abs();
       if (dy > toleranceY) continue;
 
       DebugLog.log(
@@ -65,7 +64,6 @@ class InputResolver {
         g.height,
       );
 
-      // Weighted distance: horizontal intent dominates
       final score = dx + (dy * 0.25);
 
       if (score < bestScore) {
