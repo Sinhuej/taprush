@@ -34,6 +34,10 @@ class InputResolver {
 
     final double tolerancePx = g.laneWidth * horizontalToleranceFactor;
 
+    // Vertical gate: prevents "tap below/above still hits"
+    // Eligible only if tile center is within ±0.5 tile height of the tap
+    final double toleranceY = g.tileHeight * 0.5;
+
     TapEntity? best;
     double bestScore = double.infinity;
 
@@ -50,6 +54,9 @@ class InputResolver {
       final top = e.dir == FlowDir.down ? e.y : e.y - g.tileHeight;
       final centerY = top + g.tileHeight / 2;
       final dy = (centerY - gesture.start.dy).abs();
+
+      // 🔒 HARD VERTICAL ELIGIBILITY GATE
+      if (dy > toleranceY) continue;
 
       DebugLog.log(
         'ENTITY',
@@ -68,7 +75,7 @@ class InputResolver {
     }
 
     if (best == null) {
-      DebugLog.log('MISS', 'No clear entity intent', g.height);
+      DebugLog.log('MISS', 'No eligible entity in hit window', g.height);
       return const InputResult.miss();
     }
 
