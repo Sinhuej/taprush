@@ -32,10 +32,9 @@ class InputResolver {
     );
 
     final double toleranceX = g.laneWidth * horizontalToleranceFactor;
-    final double toleranceY = g.tileHeight * 0.5;
 
-    // 🔑 Deterministic hit line (derived, model-safe)
-    final double hitLineY = g.height - (g.tileHeight * 0.5);
+    // Slight vertical forgiveness (keeps it playable)
+    final double padY = g.tileHeight * 0.15; // 15% pad above/below tile
 
     TapEntity? best;
     double bestScore = double.infinity;
@@ -43,18 +42,24 @@ class InputResolver {
     for (final e in entities) {
       if (e.consumed) continue;
 
+      // Derive entity center X from lane geometry (TapEntity has no centerX)
       final double entityCenterX =
           (e.lane * g.laneWidth) + (g.laneWidth / 2);
 
       final double dx = (entityCenterX - gesture.start.dx).abs();
       if (dx > toleranceX) continue;
 
-      final top = e.dir == FlowDir.down ? e.y : e.y - g.tileHeight;
-      final centerY = top + g.tileHeight / 2;
+      // Tile vertical bounds in the SAME coordinate space as e.y
+      final double tileTop = e.dir == FlowDir.down ? e.y : (e.y - g.tileHeight);
+      final double tileBottom = tileTop + g.tileHeight;
 
-      // 🔒 Vertical timing anchored to derived hit line
-      final double dy = (centerY - hitLineY).abs();
-      if (dy > toleranceY) continue;
+      // 🔒 HARD VERTICAL ELIGIBILITY:
+      // tap must be within the tile (plus a small forgiveness pad)
+      final double tapY = gesture.start.dy;
+      if (tapY < (tileTop - padY) || tapY > (tileBottom + padY)) continue;
+
+      final double centerY = tileTop + g.tileHeight / 2;
+      final double dy = (centerY - tapY).abs();
 
       DebugLog.log(
         'ENTITY',
@@ -63,6 +68,7 @@ class InputResolver {
         g.height,
       );
 
+      // Weighted distance: horizontal intent dominates
       final score = dx + (dy * 0.25);
 
       if (score < bestScore) {
