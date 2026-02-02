@@ -8,7 +8,6 @@ class InputResolver {
   static const double flickDistanceMin = 60;
 
   // Horizontal forgiveness as a fraction of lane width
-  // 0.4 = ±40% of lane width
   static const double horizontalToleranceFactor = 0.4;
 
   InputResult resolve({
@@ -32,10 +31,11 @@ class InputResolver {
       g.height,
     );
 
-    final double tolerancePx = g.laneWidth * horizontalToleranceFactor;
-
-    // Vertical gate: prevents "tap below/above still hits"
+    final double toleranceX = g.laneWidth * horizontalToleranceFactor;
     final double toleranceY = g.tileHeight * 0.5;
+
+    // 🔑 Deterministic hit line (derived, model-safe)
+    final double hitLineY = g.height - (g.tileHeight * 0.5);
 
     TapEntity? best;
     double bestScore = double.infinity;
@@ -43,18 +43,17 @@ class InputResolver {
     for (final e in entities) {
       if (e.consumed) continue;
 
-      // Derive entity center X from lane geometry (TapEntity has no centerX)
       final double entityCenterX =
           (e.lane * g.laneWidth) + (g.laneWidth / 2);
 
       final double dx = (entityCenterX - gesture.start.dx).abs();
-      if (dx > tolerancePx) continue;
+      if (dx > toleranceX) continue;
 
       final top = e.dir == FlowDir.down ? e.y : e.y - g.tileHeight;
       final centerY = top + g.tileHeight / 2;
 
-      // 🔑 Vertical timing anchored to HIT LINE (not finger Y)
-      final double dy = (centerY - g.hitY).abs();
+      // 🔒 Vertical timing anchored to derived hit line
+      final double dy = (centerY - hitLineY).abs();
       if (dy > toleranceY) continue;
 
       DebugLog.log(
