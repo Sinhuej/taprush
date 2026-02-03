@@ -33,8 +33,8 @@ class InputResolver {
 
     final double toleranceX = g.laneWidth * horizontalToleranceFactor;
 
-    // ✅ Tuned vertical forgiveness (human-friendly)
-    final double padY = g.tileHeight * 0.35;
+    // 🔒 FINAL tuned vertical forgiveness
+    final double padY = g.tileHeight * 0.45;
 
     TapEntity? best;
     double bestScore = double.infinity;
