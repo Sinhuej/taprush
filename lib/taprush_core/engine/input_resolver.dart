@@ -3,9 +3,20 @@ import 'models.dart';
 import 'gesture.dart';
 import '../debug/debug_log.dart';
 
+enum MissReason {
+  emptySpace,
+  microDrag,
+  flickNoTarget,
+  bombAvoided,
+}
+
 class InputResolver {
   static const double flickVelocityMin = 0.20;
   static const double flickDistanceMin = 60;
+
+  // Micro-drag classification (tap that moved a little)
+  static const double microDragDistMax = 20.0;
+  static const double microDragVelMax = 0.15;
 
   // Horizontal forgiveness as a fraction of lane width
   static const double horizontalToleranceFactor = 0.4;
@@ -22,7 +33,7 @@ class InputResolver {
       g.height,
     );
 
-    final isFlick = gesture.velocity >= flickVelocityMin &&
+    final bool isFlick = gesture.velocity >= flickVelocityMin &&
         gesture.distance >= flickDistanceMin;
 
     DebugLog.log(
@@ -65,7 +76,7 @@ class InputResolver {
         g.height,
       );
 
-      final score = dx + (dy * 0.25);
+      final double score = dx + (dy * 0.25);
 
       if (score < bestScore) {
         bestScore = score;
@@ -73,15 +84,48 @@ class InputResolver {
       }
     }
 
+    // ─────────────────────────────────────────────
+    // MISS CLASSIFICATION
+    // ─────────────────────────────────────────────
     if (best == null) {
-      DebugLog.log('MISS', 'No eligible entity in hit window', g.height);
+      final MissReason reason = isFlick
+          ? MissReason.flickNoTarget
+          : _isMicroDrag(gesture)
+              ? MissReason.microDrag
+              : MissReason.emptySpace;
+
+      DebugLog.log(
+        'MISS',
+        'reason=${reason.name}',
+        g.height,
+      );
+
       return const InputResult.miss();
     }
 
+    // Tap on bomb is intentionally ignored
+    if (!isFlick && best.isBomb) {
+      DebugLog.log(
+        'MISS',
+        'reason=${MissReason.bombAvoided.name} id=${best.id}',
+        g.height,
+      );
+      return const InputResult.miss();
+    }
+
+    // ─────────────────────────────────────────────
+    // HIT
+    // ─────────────────────────────────────────────
     return InputResult.hit(
       entity: best,
       flicked: isFlick,
       grade: HitGrade.good,
     );
+  }
+
+  bool _isMicroDrag(GestureSample g) {
+    return g.distance > 0 &&
+        g.distance <= microDragDistMax &&
+        g.velocity <= microDragVelMax;
   }
 }
