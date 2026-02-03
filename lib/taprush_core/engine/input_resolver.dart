@@ -33,8 +33,8 @@ class InputResolver {
 
     final double toleranceX = g.laneWidth * horizontalToleranceFactor;
 
-    // Slight vertical forgiveness (keeps it playable)
-    final double padY = g.tileHeight * 0.15; // 15% pad above/below tile
+    // ✅ Tuned vertical forgiveness (human-friendly)
+    final double padY = g.tileHeight * 0.35;
 
     TapEntity? best;
     double bestScore = double.infinity;
@@ -42,19 +42,16 @@ class InputResolver {
     for (final e in entities) {
       if (e.consumed) continue;
 
-      // Derive entity center X from lane geometry (TapEntity has no centerX)
       final double entityCenterX =
           (e.lane * g.laneWidth) + (g.laneWidth / 2);
 
       final double dx = (entityCenterX - gesture.start.dx).abs();
       if (dx > toleranceX) continue;
 
-      // Tile vertical bounds in the SAME coordinate space as e.y
-      final double tileTop = e.dir == FlowDir.down ? e.y : (e.y - g.tileHeight);
+      final double tileTop =
+          e.dir == FlowDir.down ? e.y : (e.y - g.tileHeight);
       final double tileBottom = tileTop + g.tileHeight;
 
-      // 🔒 HARD VERTICAL ELIGIBILITY:
-      // tap must be within the tile (plus a small forgiveness pad)
       final double tapY = gesture.start.dy;
       if (tapY < (tileTop - padY) || tapY > (tileBottom + padY)) continue;
 
@@ -68,7 +65,6 @@ class InputResolver {
         g.height,
       );
 
-      // Weighted distance: horizontal intent dominates
       final score = dx + (dy * 0.25);
 
       if (score < bestScore) {
